@@ -20,6 +20,8 @@ The freeze analysis module allows the user to automatically score an animal's mo
 
 **Note:** FreezeAnalysis_Functions.py must be in the same folder as FreezeAnalysis_individual.ipynb and FreezeAnalysis_BatchProcess.ipynb in order for them to work.
 
+![Optional Text](../master/Images/FreezeAnalysis_Schematic.png)
+
 ## Installation and Package Requirements
 The iPython scripts included in this repository require the following packages to be installed in your Conda environment.  Although the package versions used are listed it is likely that latest releases of all will be fine to use:
 * python (3.6.5)
