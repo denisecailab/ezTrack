@@ -11,6 +11,7 @@
 # ROI_Location -
 # Batch_LoadFiles - 
 # Batch_Process -
+# Play Video -
 
 ########################################################################################
 
@@ -291,16 +292,6 @@ def LocationThresh_View(examples,video_dict,reference,crop,tracking_params,stret
     cap_max = int(cap.get(7)) #get max frames. 7 is index of total frames
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
     
-    #define cropping values
-    try:
-        Xs=[crop.data['x0'][0],crop.data['x1'][0]]
-        Ys=[crop.data['y0'][0],crop.data['y1'][0]]
-        fxmin,fxmax=int(min(Xs)), int(max(Xs))
-        fymin,fymax=int(min(Ys)), int(max(Ys))
-    except:
-        fxmin,fxmax=0,reference.shape[1]
-        fymin,fymax=0,reference.shape[0]
-    
     #examine random frames
     images = []
     for example in range (examples):
@@ -492,6 +483,63 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,stretch,crop,
     layout = hv.Layout(heatmaps)
     return layout
 
+########################################################################################        
+
+def PlayVideo(video_dict,display_dict,crop,location):
+
+    #Load Video and Set Saving Parameters
+    cap = cv2.VideoCapture(video_dict['fpath'])#set file\
+    if display_dict['save_video']==True:
+        ret, frame = cap.read() #read frame
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        try: #if crop is supplied
+            Xs=[crop.data['x0'][0],crop.data['x1'][0]]
+            Ys=[crop.data['y0'][0],crop.data['y1'][0]]
+            fxmin,fxmax=int(min(Xs)), int(max(Xs))
+            fymin,fymax=int(min(Ys)), int(max(Ys))
+            frame = frame[fymin:fymax,fxmin:fxmax]
+        except: #if no cropping is used
+            fxmin,fxmax=0,frame.shape[1]
+            fymin,fymax=0,frame.shape[0]
+        width = int(frame.shape[1])
+        height = int(frame.shape[0])
+        fourcc = cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
+        writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
+                                 fourcc, 20.0, 
+                                 (width, height),
+                                 isColor=False)
+
+    #Initialize video play options    
+    cap.set(1,video_dict['start']+display_dict['start']) #set starting frame
+    rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
+
+    #Play Video
+    for f in range(display_dict['start'],display_dict['stop']):
+        ret, frame = cap.read() #read frame
+        if ret == True:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            try: #if crop is supplied
+                Xs=[crop.data['x0'][0],crop.data['x1'][0]]
+                Ys=[crop.data['y0'][0],crop.data['y1'][0]]
+                fxmin,fxmax=int(min(Xs)), int(max(Xs))
+                fymin,fymax=int(min(Ys)), int(max(Ys))
+            except: #if no cropping is used
+                fxmin,fxmax=0,frame.shape[1]
+                fymin,fymax=0,frame.shape[0]
+            frame = frame[fymin:fymax,fxmin:fxmax]
+            markposition = (int(location['X'][f]),int(location['Y'][f]))
+            cv2.drawMarker(img=frame,position=markposition,color=255)
+            cv2.imshow("preview",frame)
+            cv2.waitKey(rate)
+            #Save video (if desired). 
+            if display_dict['save_video']==True:
+                writer.write(frame) 
+
+    #Close video window and video writer if open        
+    cv2.destroyAllWindows()
+    _=cv2.waitKey(1) 
+    if display_dict['save_video']==True:
+        writer.release()
     
 ########################################################################################        
 #Code to export svg
