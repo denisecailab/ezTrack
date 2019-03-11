@@ -220,16 +220,18 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
     ret, frame = cap.read()
     frame_new = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     frame_new = frame_new[ycrop:,:]
-    #frame_new = mh.gaussian_filter(frame_new,sigma=SIGMA)
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
     #Initialize video storage if desired
     if display_dict['save_video']==True:
-        width = int(frame.shape[1]*display_dict['img_scale'])
-        height = int((frame.shape[0]+frame.shape[0]-ycrop)*display_dict['img_scale'])
+        width = int(frame.shape[1])
+        height = int(frame.shape[0]+frame.shape[0]-ycrop)
         fourcc = cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
         #fourcc = cv2.VideoWriter_fourcc(*'MJPG') #only writes up to 20 fps, though video read can be 30.
-        writer = cv2.VideoWriter('out.avi', fourcc, 20.0, (width, height),isColor=False)
+        writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
+                         fourcc, 20.0, 
+                         (width, height),
+                         isColor=False)
 
     #Loop through frames to detect frame by frame differences
     for x in range (display_dict['start']+1,display_dict['end']):
@@ -244,29 +246,22 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
 
             #Convert to gray scale
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
             #set old frame to new frame and get new frame
             frame_old = frame_new
-            #frame_new = mh.gaussian_filter(frame[ycrop:,:],sigma=SIGMA) 
             frame_new = cv2.GaussianBlur(frame[ycrop:,:].astype('float'),(0,0),SIGMA)
-
             #Calculate difference between frames
             frame_dif = np.absolute(frame_new - frame_old)
             frame_cut = (frame_dif > mt_cutoff).astype('uint8')*255
-
             #Add text to videos
             texttext = 'FREEZING' if Freezing[x]==100 else 'ACTIVE'
             cv2.putText(frame,texttext,textposition,textfont,textfontscale,textfontcolor,textlinetype)
-
             #Display video
             display = np.concatenate((frame,frame_cut))
-            #display = cv2.resize(display, (0,0), fx=2, fy=2) 
             cv2.imshow("preview",display)
             cv2.waitKey(rate)
-
             #Save video (if desired). 
             if display_dict['save_video']==True:
-                writer.write(preview) 
+                writer.write(display) 
 
         else: 
             print('No frame detected at frame : ' + str(x) + '.Stopping video play')
@@ -387,7 +382,6 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     ret, frame = cap.read()
     frame_new = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
-    #frame_new = mh.gaussian_filter(frame_new,sigma=SIGMA)
 
     #Get random set of pixels to examine across frames
     h,w=frame_new.shape
