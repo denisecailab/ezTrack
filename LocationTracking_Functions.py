@@ -509,7 +509,7 @@ def PlayVideo(video_dict,display_dict,crop,location):
                                  (width, height),
                                  isColor=False)
 
-    #Initialize video play options    
+    #Initialize video play options   
     cap.set(1,video_dict['start']+display_dict['start']) #set starting frame
     rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
 
@@ -534,12 +534,19 @@ def PlayVideo(video_dict,display_dict,crop,location):
             #Save video (if desired). 
             if display_dict['save_video']==True:
                 writer.write(frame) 
+        if ret == False:
+            print('warning. failed to get video frame')
 
     #Close video window and video writer if open        
     cv2.destroyAllWindows()
     _=cv2.waitKey(1) 
     if display_dict['save_video']==True:
         writer.release()
+
+        
+def PlayVideo2(video_dict,display_dict,crop,location):
+    cap = cv2.VideoCapture(video_dict['fpath'])
+    
     
 ########################################################################################        
 #Code to export svg
