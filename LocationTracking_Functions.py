@@ -39,10 +39,8 @@ warnings.filterwarnings("ignore")
 def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod='none'):
     
     #if batch processing, set file to first file to be processed
-    try:
-        video_dict['file'] = video_dict['FileNames'][0]
-    except:
-        video_dict['file'] = video_dict['file']
+    if 'file' not in video_dict.keys():
+        video_dict['file'] = video_dict['FileNames'][0]   
     
     #Upoad file and check that it exists
     video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])
@@ -124,10 +122,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod='none'):
 def Reference(video_dict,crop,num_frames=100):
     
     #if batch processing, set file to first file to be processed
-    try:
-        video_dict['file'] = video_dict['FileNames'][0]
-    except:
-        video_dict['file'] = video_dict['file']
+    if 'file' not in video_dict.keys():
+        video_dict['file'] = video_dict['FileNames'][0]        
     
     #get correct ref video
     vname = video_dict.get("altfile", video_dict['file'])
@@ -225,7 +221,7 @@ def Locate(cap,crop,reference,tracking_params,prior=None):
 ########################################################################################        
 
 def TrackLocation(video_dict,tracking_params,reference,crop):
-    
+          
     #load video
     cap = cv2.VideoCapture(video_dict['fpath'])#set file
     cap.set(1,video_dict['start']) #set starting frame
@@ -453,6 +449,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,stretch,crop,
     for file in video_dict['FileNames']:
         
         print ('Processing File: {f}'.format(f=file))  
+        video_dict['file'] = file #used both to set the path and to store filenames when saving
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), file)
         
         reference = Reference(video_dict,crop,num_frames=100) 
