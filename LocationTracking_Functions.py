@@ -59,7 +59,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod='none'):
     cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
     ret, frame = cap.read() 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)   
-    cap.release() 
+    cap.release()
+    print('dimensions: {x}'.format(x=frame.shape))
 
     #Make first image reference frame on which cropping can be performed
     image = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
