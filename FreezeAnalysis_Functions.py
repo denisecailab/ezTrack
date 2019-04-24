@@ -135,18 +135,18 @@ def Measure_Motion(video_dict,crop,mt_cutoff,SIGMA):
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
     cap_max = int(cap.get(7)) #7 is index of total frames
-    cap.set(1,0) #first index references frame property, second specifies next frame to grab
+    cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
+    cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
 
     #Initialize first frame
     ret, frame = cap.read()
-    #frame_new = mh.gaussian_filter(frame[ycrop:,:],sigma=SIGMA) 
     frame_new = cv2.GaussianBlur(frame[ycrop:,:].astype('float'),(0,0),SIGMA)
     
     #Initialize vector to store motion values in
-    Motion = np.zeros(cap_max)
+    Motion = np.zeros(cap_max - video_dict['start'])
 
     #Loop through frames to detect frame by frame differences
-    for x in range (1,cap_max):
+    for x in range (1,len(Motion)):
         frame_old = frame_new
         ret, frame = cap.read()
         if ret == True:
@@ -158,11 +158,10 @@ def Measure_Motion(video_dict,crop,mt_cutoff,SIGMA):
             Motion[x]=np.sum(frame_cut)
         else: 
             #if no frame is detected
-            cap_max = (x-1) #Reset max frame to last frame detected
-            Motion = Motion[:cap_max] #Amend length of motion vector
+            x = x-1 #Reset x to last frame detected
+            Motion = Motion[:x] #Amend length of motion vector
             break
         
-    print('total frames: {cap}'.format(cap=cap_max))
     cap.release() #release video
     return(Motion) #return motion values
 
@@ -207,7 +206,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
     rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
-    cap.set(1,display_dict['start']) #set reference position of first frame to 0
+    cap.set(1,video_dict['start']+display_dict['start']) #set reference position of first frame 
 
     #set text parameters
     textfont = cv2.FONT_HERSHEY_SIMPLEX
@@ -300,7 +299,6 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,crop,mt_cutoff
     avg_dict = {'all': (0, len(Motion))}
     try:
         bin_dict = {k: tuple((np.array(v) * video_dict['fps']).tolist()) for k, v in bin_dict.items()}
-        print('test')
     except AttributeError:
         bin_dict = avg_dict 
     
@@ -361,6 +359,7 @@ def Batch(video_dict,bin_dict,crop,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
     #Write summary data to csv file
     sum_pathout = os.path.join(os.path.normpath(video_dict['dpath']), 'BatchSummary.csv')
     summary_all.to_csv(sum_pathout)
+    return summary_all
 
 ########################################################################################
 
