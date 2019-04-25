@@ -225,7 +225,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
     if display_dict['save_video']==True:
         width = int(frame.shape[1])
         height = int(frame.shape[0]+frame.shape[0]-ycrop)
-        fourcc = cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
+        fourcc = 0#cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
         #fourcc = cv2.VideoWriter_fourcc(*'MJPG') #only writes up to 20 fps, though video read can be 30.
         writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
                          fourcc, 20.0, 
