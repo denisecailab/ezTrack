@@ -39,7 +39,7 @@ The iPython scripts included in this repository require the following packages t
 
 Provided you have installed miniconda (see **[Getting Started](https://github.com/DeniseCaiLab/GettingStarted)** for more details), the following commands can be executed in your terminal to create the environment: 
 1. ```conda config --add channels conda-forge```
-2. ```conda create -n ezTrack python=3.6.5 pandas=0.23.0 matplotlib=2.2.2 opencv=3.4.3 jupyter holoviews scipy```
+2. ```conda create -n ezTrack python=3.6 pandas=0.23.0 matplotlib opencv=3.4.3 jupyter holoviews scipy```
 
 ## Video requirements
 As of yet, mpg1, wmv, and avi (mp4 codec) all work.  Many more should work but have not yet been tested.  
