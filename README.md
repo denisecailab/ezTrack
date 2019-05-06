@@ -37,7 +37,7 @@ The iPython scripts included in this repository require the following packages t
 * holoviews (1.12.1)
 * scipy (1.2.1)
 
-Provided you have installed miniconda (see **[Getting Started](https://github.com/DeniseCaiLab/GettingStarted)** for more details), the following commands can be executed in your terminal to create the environment:
+Provided you have installed miniconda (see **[Getting Started](https://github.com/DeniseCaiLab/GettingStarted)** for more details), the following command can be executed in your terminal to create the environment:
 
 ```conda create -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib opencv=3.4.3 jupyter holoviews scipy```
 
