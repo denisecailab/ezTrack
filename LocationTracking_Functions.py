@@ -336,7 +336,7 @@ def ROI_plot(reference,region_names,stretch):
                height=int(reference.shape[0]*stretch['height']),
               invert_yaxis=True,cmap='gray',
               colorbar=True,
-               toolbar='above',
+               toolbar='below',
               title="Draw Regions: "+', '.join(region_names))
 
     #Create polygon element on which to draw and connect via stream to PolyDraw drawing tool
@@ -383,9 +383,12 @@ def ROI_Location(reference,poly_stream,region_names,location):
         for mask in ROI_masks:
             ROI_location[mask][f] = ROI_masks[mask][int(y),int(x)]
     
-    #Add date to location data frame
+    #Add data to location data frame
     for x in ROI_location:
         location[x]=ROI_location[x]
+    
+    #Add ROI coordinates
+    location['ROI_coordinates']=poly_stream
     
     return location
     
