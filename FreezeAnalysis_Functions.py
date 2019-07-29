@@ -34,7 +34,7 @@ warnings.filterwarnings("ignore")
 
 ########################################################################################        
 
-def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod='none'):
+def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
 
     #if batch processing, set file to first file to be processed
     try:
@@ -74,7 +74,7 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod='none'):
               title="First Frame.  Crop if Desired")
     
     #Create polygon element on which to draw and connect via stream to poly drawing tool
-    if cropmethod=='none':
+    if cropmethod==None:
         image.opts(title="First Frame")
         return image,None,video_dict
     
