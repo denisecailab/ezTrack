@@ -82,45 +82,10 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
         box_stream = streams.BoxEdit(source=box,num_objects=1)     
         return (image*box),box_stream,video_dict
     
-    if cropmethod=='HLine':  
-        points = hv.Points([])
-        points.opts(active_tools=['point_draw'], color='white',size=1)
-        pointerXY_stream = streams.PointerXY(x=0, y=0, source=image)
-        pointDraw_stream = streams.PointDraw(source=points,num_objects=1)
-            
-        def h_track(x, y): #function to track pointer
-            y = int(np.around(y))
-            text = hv.Text(x, y, str(y), halign='left', valign='bottom')
-            return hv.HLine(y) * text
-        track=hv.DynamicMap(h_track, streams=[pointerXY_stream])
-        
-        def h_line(data): #function to draw line
-            try:
-                hline=hv.HLine(data['y'][0])
-                return hline
-            except:
-                hline=hv.HLine(0)
-                return hline
-        line=hv.DynamicMap(h_line,streams=[pointDraw_stream])
-        
-        def h_text(data): #function to write ycrop value
-            center=frame.shape[1]//2 
-            try:
-                y=int(np.around(data['y'][0]))
-                htext=hv.Text(center,y+10,'ycrop: {x}'.format(x=y))
-                return htext
-            except:
-                htext=hv.Text(center,10, 'ycrop: 0')
-                return htext
-        text=hv.DynamicMap(h_text,streams=[pointDraw_stream])
-        
-        return image*track*points*line*text,pointDraw_stream,video_dict   
-    
-    
 
 ########################################################################################
     
-def Reference(video_dict,crop,num_frames=100):
+def Reference(video_dict,crop=None,num_frames=100):
     
     #if batch processing, set file to first file to be processed
     if 'file' not in video_dict.keys():
@@ -174,7 +139,7 @@ def Reference(video_dict,crop,num_frames=100):
 
 ########################################################################################
 
-def Locate(cap,crop,reference,tracking_params,prior=None):    
+def Locate(cap,reference,tracking_params,crop=None,prior=None):    
     
     #attempt to load frame
     ret, frame = cap.read() #read frame
@@ -221,7 +186,7 @@ def Locate(cap,crop,reference,tracking_params,prior=None):
         
 ########################################################################################        
 
-def TrackLocation(video_dict,tracking_params,reference,crop):
+def TrackLocation(video_dict,tracking_params,reference,crop=None):
           
     #load video
     cap = cv2.VideoCapture(video_dict['fpath'])#set file
@@ -241,9 +206,9 @@ def TrackLocation(video_dict,tracking_params,reference,crop):
         if f>0: 
             yprior = np.around(Y[f-1]).astype(int)
             xprior = np.around(X[f-1]).astype(int)
-            ret,dif,com,frame = Locate(cap,crop,reference,tracking_params,prior=[yprior,xprior])
+            ret,dif,com,frame = Locate(cap,reference,tracking_params,crop,prior=[yprior,xprior])
         else:
-            ret,dif,com,frame = Locate(cap,crop,reference,tracking_params)
+            ret,dif,com,frame = Locate(cap,reference,tracking_params,crop)
                                                 
         if ret == True:          
             Y[f] = com[0]
@@ -257,7 +222,6 @@ def TrackLocation(video_dict,tracking_params,reference,crop):
             Y = Y[:f] #Amend length of Y vector
             D = D[:f] #Amend length of D vector
             break   
-    
     #release video
     cap.release()
     print('total frames processed: {f}'.format(f=len(D)))
@@ -282,7 +246,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop):
 
 ########################################################################################
 
-def LocationThresh_View(examples,video_dict,reference,crop,tracking_params,stretch):
+def LocationThresh_View(examples,video_dict,reference,tracking_params,crop=None,stretch={'width':1,'height':1}):
     
     #load video
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -296,7 +260,7 @@ def LocationThresh_View(examples,video_dict,reference,crop,tracking_params,stret
         #analyze frame
         frm=np.random.randint(video_dict['start'],cap_max) #select random frame
         cap.set(1,frm) #sets frame to be next to be grabbed
-        ret,dif,com,frame = Locate(cap,crop,reference,tracking_params) #get frame difference from reference 
+        ret,dif,com,frame = Locate(cap,reference,tracking_params,crop=crop) #get frame difference from reference 
 
         #plot original frame
         image_orig = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
@@ -325,10 +289,10 @@ def LocationThresh_View(examples,video_dict,reference,crop,tracking_params,stret
 
 ########################################################################################    
     
-def ROI_plot(reference,region_names,stretch):
+def ROI_plot(reference,region_names,stretch={'width':1,'height':1}):
     
-    #Define parameters for plot presentation
-    nobjects = len(region_names) #get number of objects to be drawn
+    #get number of objects to be drawn
+    nobjects = len(region_names) if region_names else 0 
 
     #Make reference image the base image on which to draw
     image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference))
@@ -337,7 +301,7 @@ def ROI_plot(reference,region_names,stretch):
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
-              title="Draw Regions: "+', '.join(region_names))
+              title="No Regions to Draw" if nobjects == 0 else "Draw Regions: "+', '.join(region_names))
 
     #Create polygon element on which to draw and connect via stream to PolyDraw drawing tool
     poly = hv.Polygons([])
@@ -353,14 +317,17 @@ def ROI_plot(reference,region_names,stretch):
         ys = [np.mean(y) for y in y_ls]
         rois = region_names[:len(xs)]
         return hv.Labels((xs, ys, rois))
-
-    dmap = hv.DynamicMap(centers, streams=[poly_stream])
     
-    return (image * poly * dmap), poly_stream
+    if nobjects > 0:
+        dmap = hv.DynamicMap(centers, streams=[poly_stream])
+        return (image * poly * dmap), poly_stream
+    else:
+        return (image),None
+    
 
 ########################################################################################    
 
-def ROI_Location(reference,poly_stream,region_names,location):
+def ROI_Location(reference,location,region_names,poly_stream):
 
     #Create ROI Masks
     ROI_masks = {}
@@ -388,7 +355,7 @@ def ROI_Location(reference,poly_stream,region_names,location):
         location[x]=ROI_location[x]
     
     #Add ROI coordinates
-    location['ROI_coordinates']=poly_stream
+    location['ROI_coordinates']=str(poly_stream.data)
     
     return location
     
@@ -430,15 +397,15 @@ def Batch_LoadFiles(video_dict):
     if os.path.isdir(video_dict['dpath']):
         video_dict['FileNames'] = sorted(os.listdir(video_dict['dpath']))
         video_dict['FileNames'] = fnmatch.filter(video_dict['FileNames'], ('*.' + video_dict['ftype'])) 
-        crop,poly_stream = None,None
-        return video_dict, crop, poly_stream
+        return video_dict
     else:
         raise FileNotFoundError('{path} not found. Check that directory is correct'.format(
             path=video_dict['dpath']))
 
 ######################################################################################## 
 
-def Batch_Process(video_dict,tracking_params,bin_dict,region_names,stretch,crop,poly_stream=None):
+def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
+                  stretch={'width':1,'height':1},crop=None,poly_stream=None):
     
     #get polygon
     if poly_stream != None:
@@ -456,10 +423,10 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,stretch,crop,
         video_dict['file'] = file #used both to set the path and to store filenames when saving
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), file)
         
-        reference = Reference(video_dict,crop,num_frames=100) 
-        location = TrackLocation(video_dict,tracking_params,reference,crop)
+        reference = Reference(video_dict,crop=crop,num_frames=100) 
+        location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
         if region_names!=None:
-            location = ROI_Location(reference,poly_stream,region_names,location)
+            location = ROI_Location(reference,location,region_names,poly_stream)
         location.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv')
         file_summary = Summarize_Location(location, video_dict, bin_dict=bin_dict, region_names=region_names)
                
@@ -486,7 +453,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,stretch,crop,
 
 ########################################################################################        
 
-def PlayVideo(video_dict,display_dict,crop,location):
+def PlayVideo(video_dict,display_dict,location,crop=None):
 
     #Load Video and Set Saving Parameters
     cap = cv2.VideoCapture(video_dict['fpath'])#set file\
@@ -544,9 +511,6 @@ def PlayVideo(video_dict,display_dict,crop,location):
     if display_dict['save_video']==True:
         writer.release()
 
-        
-def PlayVideo2(video_dict,display_dict,crop,location):
-    cap = cv2.VideoCapture(video_dict['fpath'])
     
     
 ########################################################################################        

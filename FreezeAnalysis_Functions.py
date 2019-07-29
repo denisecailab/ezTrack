@@ -80,48 +80,13 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
         box = hv.Polygons([])
         box.opts(alpha=.5)
         box_stream = streams.BoxEdit(source=box,num_objects=1)     
-        return (image*box),box_stream,video_dict
-    
-    if cropmethod=='HLine':  
-        points = hv.Points([])
-        points.opts(active_tools=['point_draw'], color='white',size=1)
-        pointerXY_stream = streams.PointerXY(x=0, y=0, source=image)
-        pointDraw_stream = streams.PointDraw(source=points,num_objects=1)
-            
-        def h_track(x, y): #function to track pointer
-            y = int(np.around(y))
-            text = hv.Text(x, y, str(y), halign='left', valign='bottom')
-            return hv.HLine(y) * text
-        track=hv.DynamicMap(h_track, streams=[pointerXY_stream])
-        
-        def h_line(data): #function to draw line
-            try:
-                hline=hv.HLine(data['y'][0])
-                return hline
-            except:
-                hline=hv.HLine(0)
-                return hline
-        line=hv.DynamicMap(h_line,streams=[pointDraw_stream])
-        
-        def h_text(data): #function to write ycrop value
-            center=frame.shape[1]//2 
-            try:
-                y=int(np.around(data['y'][0]))
-                htext=hv.Text(center,y+10,'ycrop: {x}'.format(x=y))
-                return htext
-            except:
-                htext=hv.Text(center,10, 'ycrop: 0')
-                return htext
-        text=hv.DynamicMap(h_text,streams=[pointDraw_stream])
-        
-        
-        return image*track*points*line*text,pointDraw_stream,video_dict   
+        return (image*box),box_stream,video_dict  
     
 
 ########################################################################################
 
 
-def Measure_Motion (video_dict,crop,mt_cutoff,SIGMA):
+def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -159,7 +124,7 @@ def Measure_Motion (video_dict,crop,mt_cutoff,SIGMA):
 
 ########################################################################################
 
-def cropframe(frame,crop):
+def cropframe(frame,crop=None):
     try: #if crop is supplied
         Xs=[crop.data['x0'][0],crop.data['x1'][0]]
         Ys=[crop.data['y0'][0],crop.data['y1'][0]]
@@ -198,7 +163,7 @@ def Measure_Freezing(Motion,FreezeThresh,MinDuration):
 
 ########################################################################################
 
-def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
+def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -285,7 +250,7 @@ def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
 ########################################################################################        
 
 
-def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,crop,mt_cutoff,bin_dict=None):
+def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_dict=None):
     
     #define bins
     avg_dict = {'all': (0, len(Motion))}
@@ -318,15 +283,23 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,crop,mt_cutoff
 
 ########################################################################################
 
-def Batch(video_dict,bin_dict,crop,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
-    
-    #Get list of video files
+
+def Batch_LoadFiles(video_dict):
+
+    #Get list of video files of designated type
     if os.path.isdir(video_dict['dpath']):
         video_dict['FileNames'] = sorted(os.listdir(video_dict['dpath']))
         video_dict['FileNames'] = fnmatch.filter(video_dict['FileNames'], ('*.' + video_dict['ftype'])) 
+        return video_dict
     else:
         raise FileNotFoundError('{path} not found. Check that directory is correct'.format(
             path=video_dict['dpath']))
+
+        
+########################################################################################
+        
+        
+def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA=1):    
 
     #Loop through files    
     for video_dict['file'] in video_dict['FileNames']:
@@ -336,11 +309,11 @@ def Batch(video_dict,bin_dict,crop,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])
 
         #Analyze frame by frame motion and freezing and save csv of results
-        Motion = Measure_Motion(video_dict,crop,mt_cutoff,SIGMA=1)  
+        Motion = Measure_Motion(video_dict,mt_cutoff,crop,SIGMA=1)  
         Freezing = Measure_Freezing(Motion,FreezeThresh,MinDuration)  
         SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration)
         summary = Summarize(video_dict,Motion,Freezing,FreezeThresh,
-                            MinDuration,crop,mt_cutoff,bin_dict=bin_dict)
+                            MinDuration,mt_cutoff,bin_dict=bin_dict)
 
         #Add summary info for individual file to larger summary of all files
         try:
@@ -477,4 +450,88 @@ def Calibrate(video_dict,cal_pix,SIGMA):
 #     return(Motion) #return motion values
 
 
+########################################################################################        
+
+# def LoadAndCrop_OLD (video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
+
+#     #if batch processing, set file to first file to be processed
+#     if batch:
+#         video_dict['file'] = video_dict['FileNames'][0]
+        
+#     #Upoad file and check that it exists
+#     video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])
+#     if os.path.isfile(video_dict['fpath']):
+#         print('file: {file}'.format(file=video_dict['fpath']))
+#         cap = cv2.VideoCapture(video_dict['fpath'])
+#     else:
+#         raise FileNotFoundError('{file} not found. Check that directory and file names are correct'.format(
+#             file=video_dict['fpath']))
+
+#     #Get maxiumum frame of file. Note that max frame is updated later if fewer frames detected
+#     cap_max = int(cap.get(7)) #7 is index of total frames
+#     print('total frames: {frames}'.format(frames=cap_max))
+
+#     #Set first frame. 
+#     try:
+#         cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
+#     except:
+#         cap.set(1,0)
+#     ret, frame = cap.read() 
+#     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)   
+#     cap.release() 
+
+#     #Make first image reference frame on which cropping can be performed
+#     image = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
+#     image.opts(width=int(frame.shape[1]*stretch['width']),
+#                height=int(frame.shape[0]*stretch['height']),
+#               invert_yaxis=True,cmap='gray',
+#               colorbar=True,
+#                toolbar='below',
+#               title="First Frame.  Crop if Desired")
+    
+#     #Create polygon element on which to draw and connect via stream to poly drawing tool
+#     if cropmethod==None:
+#         image.opts(title="First Frame")
+#         return image,None,video_dict
+    
+#     if cropmethod=='Box':         
+#         box = hv.Polygons([])
+#         box.opts(alpha=.5)
+#         box_stream = streams.BoxEdit(source=box,num_objects=1)     
+#         return (image*box),box_stream,video_dict
+    
+#     if cropmethod=='HLine':  
+#         points = hv.Points([])
+#         points.opts(active_tools=['point_draw'], color='white',size=1)
+#         pointerXY_stream = streams.PointerXY(x=0, y=0, source=image)
+#         pointDraw_stream = streams.PointDraw(source=points,num_objects=1)
+            
+#         def h_track(x, y): #function to track pointer
+#             y = int(np.around(y))
+#             text = hv.Text(x, y, str(y), halign='left', valign='bottom')
+#             return hv.HLine(y) * text
+#         track=hv.DynamicMap(h_track, streams=[pointerXY_stream])
+        
+#         def h_line(data): #function to draw line
+#             try:
+#                 hline=hv.HLine(data['y'][0])
+#                 return hline
+#             except:
+#                 hline=hv.HLine(0)
+#                 return hline
+#         line=hv.DynamicMap(h_line,streams=[pointDraw_stream])
+        
+#         def h_text(data): #function to write ycrop value
+#             center=frame.shape[1]//2 
+#             try:
+#                 y=int(np.around(data['y'][0]))
+#                 htext=hv.Text(center,y+10,'ycrop: {x}'.format(x=y))
+#                 return htext
+#             except:
+#                 htext=hv.Text(center,10, 'ycrop: 0')
+#                 return htext
+#         text=hv.DynamicMap(h_text,streams=[pointDraw_stream])
+        
+        
+#         return image*track*points*line*text,pointDraw_stream,video_dict   
 
