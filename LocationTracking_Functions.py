@@ -39,8 +39,8 @@ warnings.filterwarnings("ignore")
 def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
     
     #if batch processing, set file to first file to be processed
-    if 'file' not in video_dict.keys():
-        video_dict['file'] = video_dict['FileNames'][0]   
+    if batch:
+        video_dict['file'] = video_dict['FileNames'][0] 
     
     #Upoad file and check that it exists
     video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])

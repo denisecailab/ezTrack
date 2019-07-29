@@ -37,11 +37,9 @@ warnings.filterwarnings("ignore")
 def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
 
     #if batch processing, set file to first file to be processed
-    try:
+    if batch:
         video_dict['file'] = video_dict['FileNames'][0]
-    except:
-        video_dict['file'] = video_dict['file']
-    
+        
     #Upoad file and check that it exists
     video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])
     if os.path.isfile(video_dict['fpath']):
@@ -116,21 +114,14 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
                 return htext
         text=hv.DynamicMap(h_text,streams=[pointDraw_stream])
         
+        
         return image*track*points*line*text,pointDraw_stream,video_dict   
     
 
 ########################################################################################
 
-def Measure_Motion(video_dict,crop,mt_cutoff,SIGMA):
-    
-    #Extract ycrop value 
-    try: #if passed as x,y coordinates
-        if len(crop.data['y'])!=0:
-            ycrop = int(np.around(crop.data['y'][0]))
-        else:
-            ycrop=0
-    except: #if passed as single value
-        ycrop=crop
+
+def Measure_Motion (video_dict,crop,mt_cutoff,SIGMA):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -138,21 +129,22 @@ def Measure_Motion(video_dict,crop,mt_cutoff,SIGMA):
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
     cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
 
-    #Initialize first frame
-    ret, frame = cap.read()
-    frame_new = cv2.GaussianBlur(frame[ycrop:,:].astype('float'),(0,0),SIGMA)
-    
-    #Initialize vector to store motion values in
+    #Initialize first frame and array to store motion values in
+    ret, frame_new = cap.read()
+    frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+    frame_new = cropframe(frame_new, crop)
+    frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)  
     Motion = np.zeros(cap_max - video_dict['start'])
 
     #Loop through frames to detect frame by frame differences
     for x in range (1,len(Motion)):
         frame_old = frame_new
-        ret, frame = cap.read()
+        ret, frame_new = cap.read()
         if ret == True:
             #Reset new frame and process calculate difference between old/new frames
-            #frame_new = mh.gaussian_filter(frame[ycrop:,:],sigma=SIGMA) 
-            frame_new = cv2.GaussianBlur(frame[ycrop:,:].astype('float'),(0,0),SIGMA)
+            frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+            frame_new = cropframe(frame_new, crop)
+            frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)  
             frame_dif = np.absolute(frame_new - frame_old)
             frame_cut = (frame_dif > mt_cutoff).astype('uint8')
             Motion[x]=np.sum(frame_cut)
@@ -164,6 +156,20 @@ def Measure_Motion(video_dict,crop,mt_cutoff,SIGMA):
         
     cap.release() #release video
     return(Motion) #return motion values
+
+########################################################################################
+
+def cropframe(frame,crop):
+    try: #if crop is supplied
+        Xs=[crop.data['x0'][0],crop.data['x1'][0]]
+        Ys=[crop.data['y0'][0],crop.data['y1'][0]]
+        fxmin,fxmax=int(min(Xs)), int(max(Xs))
+        fymin,fymax=int(min(Ys)), int(max(Ys))
+    except: #if no cropping is used
+        fxmin,fxmax=0,frame.shape[1]
+        fymin,fymax=0,frame.shape[0]
+    return frame[fymin:fymax,fxmin:fxmax]
+     
 
 ########################################################################################
 
@@ -194,15 +200,6 @@ def Measure_Freezing(Motion,FreezeThresh,MinDuration):
 
 def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
     
-    #Extract ycrop value 
-    try: #if passed as x,y coordinates
-        if len(crop.data['y'])!=0:
-            ycrop = int(np.around(crop.data['y'][0]))
-        else:
-            ycrop=0
-    except: #if passed as single value
-        ycrop=crop
-    
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
     rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
@@ -216,21 +213,18 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
     textfontcolor = 255
 
     #Initialize first frame
-    ret, frame = cap.read()
-    frame_new = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    frame_new = frame_new[ycrop:,:]
+    ret, frame_new = cap.read()
+    frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+    frame_new = cropframe(frame_new, crop)
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
     #Initialize video storage if desired
     if display_dict['save_video']==True:
-        width = int(frame.shape[1])
-        height = int(frame.shape[0]+frame.shape[0]-ycrop)
-        fourcc = 0#cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
-        #fourcc = cv2.VideoWriter_fourcc(*'MJPG') #only writes up to 20 fps, though video read can be 30.
+        width = int(frame_new.shape[1])
+        height = int(frame_new.shape[0] * 2)
+        fourcc = 0
         writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
-                         fourcc, 20.0, 
-                         (width, height),
-                         isColor=False)
+                         fourcc, 20.0, (width, height), isColor=False)
 
     #Loop through frames to detect frame by frame differences
     for x in range (display_dict['start']+1,display_dict['end']):
@@ -240,25 +234,23 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop,SIGMA):
             break
 
         #Attempt to load next frame
-        ret, frame = cap.read()
+        frame_old = frame_new
+        ret, frame_new = cap.read()
         if ret == True:
-
-            #Convert to gray scale
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            #set old frame to new frame and get new frame
-            frame_old = frame_new
-            frame_new = cv2.GaussianBlur(frame[ycrop:,:].astype('float'),(0,0),SIGMA)
-            #Calculate difference between frames
+            
+            #process frame           
+            frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+            frame_new = cropframe(frame_new, crop)
+            frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA) 
             frame_dif = np.absolute(frame_new - frame_old)
             frame_cut = (frame_dif > mt_cutoff).astype('uint8')*255
-            #Add text to videos
+
+            #Add text to videos, display and save
             texttext = 'FREEZING' if Freezing[x]==100 else 'ACTIVE'
-            cv2.putText(frame,texttext,textposition,textfont,textfontscale,textfontcolor,textlinetype)
-            #Display video
-            display = np.concatenate((frame,frame_cut))
+            cv2.putText(frame_new,texttext,textposition,textfont,textfontscale,textfontcolor,textlinetype)
+            display = np.concatenate((frame_new.astype('uint8'),frame_cut))
             cv2.imshow("preview",display)
             cv2.waitKey(rate)
-            #Save video (if desired). 
             if display_dict['save_video']==True:
                 writer.write(display) 
 
@@ -402,7 +394,6 @@ def Calibrate(video_dict,cal_pix,SIGMA):
             #Process frame
             frame_new = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
-            #frame_new = mh.gaussian_filter(frame_new,sigma=SIGMA) # used to reduce influence of jitter from one frame to the next
 
             #Get differences for select pixels
             frame_pix_dif = np.absolute(frame_new[h_loc,w_loc] - frame_old[h_loc,w_loc])
@@ -436,4 +427,54 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     vline = hv.VLine(mt_cutoff)
     vline.opts(color='red')
     return hist*vline
-       
+
+
+########################################################################################
+
+
+# def Measure_Motion_OLD (video_dict,crop,mt_cutoff,SIGMA):
+    
+#     #Extract ycrop value 
+#     try: #if passed as x,y coordinates
+#         if len(crop.data['y'])!=0:
+#             ycrop = int(np.around(crop.data['y'][0]))
+#         else:
+#             ycrop=0
+#     except: #if passed as single value
+#         ycrop=crop
+    
+#     #Upoad file
+#     cap = cv2.VideoCapture(video_dict['fpath'])
+#     cap_max = int(cap.get(7)) #7 is index of total frames
+#     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
+#     cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
+
+#     #Initialize first frame
+#     ret, frame = cap.read()
+#     frame_new = cv2.GaussianBlur(frame[ycrop:,:].astype('float'),(0,0),SIGMA)
+    
+#     #Initialize vector to store motion values in
+#     Motion = np.zeros(cap_max - video_dict['start'])
+
+#     #Loop through frames to detect frame by frame differences
+#     for x in range (1,len(Motion)):
+#         frame_old = frame_new
+#         ret, frame = cap.read()
+#         if ret == True:
+#             #Reset new frame and process calculate difference between old/new frames
+#             #frame_new = mh.gaussian_filter(frame[ycrop:,:],sigma=SIGMA) 
+#             frame_new = cv2.GaussianBlur(frame[ycrop:,:].astype('float'),(0,0),SIGMA)
+#             frame_dif = np.absolute(frame_new - frame_old)
+#             frame_cut = (frame_dif > mt_cutoff).astype('uint8')
+#             Motion[x]=np.sum(frame_cut)
+#         else: 
+#             #if no frame is detected
+#             x = x-1 #Reset x to last frame detected
+#             Motion = Motion[:x] #Amend length of motion vector
+#             break
+        
+#     cap.release() #release video
+#     return(Motion) #return motion values
+
+
+
