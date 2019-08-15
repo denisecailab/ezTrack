@@ -547,7 +547,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
 
 ########################################################################################
 
-def LocationThresh_View(examples,video_dict,reference,tracking_params,crop=None,stretch={'width':1,'height':1}):
+def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=None,stretch={'width':1,'height':1}):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -597,6 +597,8 @@ def LocationThresh_View(examples,video_dict,reference,tracking_params,crop=None,
                 'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
                                   weight of window surrounding prior locaiton. 
                                   [float between 0-1]
+        examples:: [uint]
+            The number of frames for location tracking to be tested on.
             
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
