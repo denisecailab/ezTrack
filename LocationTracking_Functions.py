@@ -2,7 +2,8 @@
 
 LIST OF FUNCTIONS
 
-LoadAndCrop  
+LoadAndCrop
+cropframe
 Reference
 Locate
 TrackLocation
@@ -42,9 +43,7 @@ warnings.filterwarnings("ignore")
 
 
 
-########################################################################################
-
-      
+########################################################################################    
 
 def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
     """ 
@@ -166,7 +165,47 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
     
 
 ########################################################################################
+
+def cropframe(frame,crop=None):
+    """ 
+    -------------------------------------------------------------------------------------
     
+    Crops passed frame with `crop` specification
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        frame:: [numpy.ndarray]
+            2d numpy array 
+        crop:: [hv.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices. Set to None if no cropping supplied.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        frame:: [numpy.ndarray]
+            2d numpy array
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
+    
+    try:
+        Xs=[crop.data['x0'][0],crop.data['x1'][0]]
+        Ys=[crop.data['y0'][0],crop.data['y1'][0]]
+        fxmin,fxmax=int(min(Xs)), int(max(Xs))
+        fymin,fymax=int(min(Ys)), int(max(Ys))
+        return frame[fymin:fymax,fxmin:fxmax]
+    except:
+        return frame
+ 
+    
+    
+    
+
+########################################################################################
+
 def Reference(video_dict,crop=None,num_frames=100):
     """ 
     -------------------------------------------------------------------------------------
@@ -231,15 +270,8 @@ def Reference(video_dict,crop=None,num_frames=100):
     #Get video dimensions with any cropping applied
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    try: #if frame is cropped
-        Xs=[crop.data['x0'][0],crop.data['x1'][0]]
-        Ys=[crop.data['y0'][0],crop.data['y1'][0]]
-        fxmin,fxmax=int(min(Xs)), int(max(Xs))
-        fymin,fymax=int(min(Ys)), int(max(Ys))
-    except: #if no crop
-        fxmin,fxmax=0,frame.shape[1]
-        fymin,fymax=0,frame.shape[0]
-    h,w=(fymax-fymin),(fxmax-fxmin)
+    frame = cropframe(frame, crop)
+    h,w = frame.shape[0], frame.shape[1]
     cap_max = int(cap.get(7)) #7 is index of total frames
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
     
@@ -253,7 +285,7 @@ def Reference(video_dict,crop=None,num_frames=100):
             ret, frame = cap.read()
             if ret == True:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                gray = gray[fymin:fymax,fxmin:fxmax]
+                gray = cropframe(gray, crop)
                 collection[x,:,:]=gray
                 grabbed = True
             elif ret == False:
@@ -346,15 +378,7 @@ def Locate(cap,reference,tracking_params,crop=None,prior=None):
         
         #load frame and crop
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        try: #if crop is supplied
-            Xs=[crop.data['x0'][0],crop.data['x1'][0]]
-            Ys=[crop.data['y0'][0],crop.data['y1'][0]]
-            fxmin,fxmax=int(min(Xs)), int(max(Xs))
-            fymin,fymax=int(min(Ys)), int(max(Ys))
-        except: #if no cropping is used
-            fxmin,fxmax=0,frame.shape[1]
-            fymin,fymax=0,frame.shape[0]
-        frame = frame[fymin:fymax,fxmin:fxmax]
+        frame = cropframe(frame,crop)
         
         #find difference from reference and blur
         dif = np.absolute(frame-reference)
@@ -1123,17 +1147,8 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     if display_dict['save_video']==True:
         ret, frame = cap.read() #read frame
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        try: #if crop is supplied
-            Xs=[crop.data['x0'][0],crop.data['x1'][0]]
-            Ys=[crop.data['y0'][0],crop.data['y1'][0]]
-            fxmin,fxmax=int(min(Xs)), int(max(Xs))
-            fymin,fymax=int(min(Ys)), int(max(Ys))
-            frame = frame[fymin:fymax,fxmin:fxmax]
-        except: #if no cropping is used
-            fxmin,fxmax=0,frame.shape[1]
-            fymin,fymax=0,frame.shape[0]
-        width = int(frame.shape[1])
-        height = int(frame.shape[0])
+        frame = cropframe(frame, crop)
+        height, width = int(frame.shape[0]), int(frame.shape[1])
         fourcc = 0#cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
         writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
                                  fourcc, 20.0, 
@@ -1149,15 +1164,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
         ret, frame = cap.read() #read frame
         if ret == True:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            try: #if crop is supplied
-                Xs=[crop.data['x0'][0],crop.data['x1'][0]]
-                Ys=[crop.data['y0'][0],crop.data['y1'][0]]
-                fxmin,fxmax=int(min(Xs)), int(max(Xs))
-                fymin,fymax=int(min(Ys)), int(max(Ys))
-            except: #if no cropping is used
-                fxmin,fxmax=0,frame.shape[1]
-                fymin,fymax=0,frame.shape[0]
-            frame = frame[fymin:fymax,fxmin:fxmax]
+            frame = cropframe(frame, crop)
             markposition = (int(location['X'][f]),int(location['Y'][f]))
             cv2.drawMarker(img=frame,position=markposition,color=255)
             cv2.imshow("preview",frame)
