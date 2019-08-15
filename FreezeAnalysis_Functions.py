@@ -285,10 +285,9 @@ def cropframe(frame,crop=None):
         Ys=[crop.data['y0'][0],crop.data['y1'][0]]
         fxmin,fxmax=int(min(Xs)), int(max(Xs))
         fymin,fymax=int(min(Ys)), int(max(Ys))
+        return frame[fymin:fymax,fxmin:fxmax]
     except:
-        fxmin,fxmax=0,frame.shape[1]
-        fymin,fymax=0,frame.shape[0]
-    return frame[fymin:fymax,fxmin:fxmax]
+        return frame
  
     
     
