@@ -206,7 +206,7 @@ def cropframe(frame,crop=None):
 
 ########################################################################################
 
-def Reference(video_dict,crop=None,num_frames=100):
+def Reference(video_dict,crop=None,num_frames=100,altfile=False,batch=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -240,11 +240,21 @@ def Reference(video_dict,crop=None,num_frames=100):
         
         num_frames:: [uint]
             Number of frames to base reference frame on.
+            
+        altfile:: [bool]
+            Specify whether alternative file than video to be processed will be
+            used to generate reference frame. If `altfile=True`, it is expected
+            that `video_dict` contains `altfile` key.
+        
+        batch:: [bool]
+            Dictates whether batch processing is being performed.  True/False
     
     -------------------------------------------------------------------------------------
     Returns:
         reference:: [numpy.array]
             Reference image. Median of random subset of frames.
+        image:: [holoviews.image]
+            Holoviews Image of reference image.
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -253,18 +263,15 @@ def Reference(video_dict,crop=None,num_frames=100):
     """
     
     #if batch processing, set file to first file to be processed
-    if 'file' not in video_dict.keys():
-        video_dict['file'] = video_dict['FileNames'][0]        
+    video_dict['file'] = video_dict['FileNames'][0] if batch else video_dict['file']      
     
     #get correct ref video
-    vname = video_dict.get("altfile", video_dict['file'])
+    vname = video_dict.get("altfile","") if altfile else video_dict['file']    
     fpath = os.path.join(os.path.normpath(video_dict['dpath']), vname)
     if os.path.isfile(fpath):
         cap = cv2.VideoCapture(fpath)
     else:
         raise FileNotFoundError('File not found. Check that directory and file names are correct.')
-
-    #Upoad file
     cap.set(1,0)#first index references frame property, second specifies next frame to grab
     
     #Get video dimensions with any cropping applied
@@ -293,7 +300,16 @@ def Reference(video_dict,crop=None,num_frames=100):
     cap.release() 
     
     reference = np.median(collection,axis=0)
-    return reference    
+    image = hv.Image((np.arange(reference.shape[1]),
+                      np.arange(reference.shape[0]), 
+                      reference)).opts(width=int(reference.shape[1]),
+                                       height=int(reference.shape[0]),
+                                       invert_yaxis=True,
+                                       cmap='gray',
+                                       colorbar=True,
+                                       toolbar='below',
+                                       title="Reference Frame") 
+    return reference, image    
 
 
 
@@ -1057,7 +1073,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
         video_dict['file'] = file #used both to set the path and to store filenames when saving
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), file)
         
-        reference = Reference(video_dict,crop=crop,num_frames=100) 
+        reference = Reference(video_dict,crop=crop,num_frames=100,batch=True) 
         location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
         if region_names!=None:
             location = ROI_Location(reference,location,region_names,poly_stream)
