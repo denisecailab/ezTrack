@@ -13,6 +13,7 @@ ROI_Location
 Battch_LoadFiles
 Batch_Process
 PlayVideo
+showtrace
 
 """
 
@@ -1109,8 +1110,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
 
 ########################################################################################        
 
-def PlayVideo(video_dict,display_dict,location,crop=None):
-    
+def PlayVideo(video_dict,display_dict,location,crop=None):  
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1203,6 +1203,57 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     
     
     
+########################################################################################
+
+def showtrace(reference,location,color="red",alpha=.8,size=3):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Create image where animal location across session is displayed atop reference frame
+
+    -------------------------------------------------------------------------------------
+    Args:
+        
+        reference:: [numpy array]
+            Reference image that the current frame is compared to.
+        
+        location:: [pandas.dataframe]
+            Pandas dataframe with frame by frame x and y locations,
+            distance travelled, as well as video information and parameter values. 
+                
+        color:: [str]
+            Color of trace.  See Holoviews documentation for color options
+                               
+        alpha:: [float]
+            Alpha of trace.  See Holoviews documentation for details
+        
+        size:: [float]
+            Size of trace.  See Holoviews documentation for details.     
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Nothing returned
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
+    
+    image = hv.Image((np.arange(reference.shape[1]),
+                      np.arange(reference.shape[0]),
+                      reference)
+                    ).opts(width=int(reference.shape[1]),
+                           height=int(reference.shape[0]),
+                           invert_yaxis=True,cmap='gray',toolbar='below',
+                           title="Motion Trace")
+    points = hv.Scatter(np.array([location['X'],location['Y']]).T).opts(color='red',alpha=.5,size=3)
+    trace = image*points
+    return trace
+
+
+
+
+
 ########################################################################################        
 #Code to export svg
 #conda install -c conda-forge selenium phantomjs
