@@ -1,16 +1,22 @@
-#
-#List of Functions in FreezeAnalysis_Functions
-#
+"""
 
-# Check -
-# LoadAndCrop - 
-# Measure_Motion -
-# Measure_Freezing -
-# Play_Video -
-# Save_Data -
-# Summarize -
-# Batch -
-# Calibrate -
+LIST OF FUNCTIONS
+
+LoadAndCrop  
+Measure_Motion 
+cropframe
+Measure_Freezing 
+Play_Video 
+Save_Data 
+Summarize 
+Batch 
+Calibrate 
+
+"""
+
+
+
+
 
 ########################################################################################
 
@@ -32,10 +38,82 @@ hv.notebook_extension('bokeh')
 warnings.filterwarnings("ignore")
 
 
+
+
+
 ########################################################################################        
 
 def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
-
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Loads video and creates interactive cropping tool from first frame. In the 
+    case of batch processing, the first frame of the first video is used. Additionally, 
+    when batch processing, the same cropping parameters will be appplied to every video.  
+    Care should therefore be taken that the region of interest is in the same position across 
+    videos.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch frame width [float]
+                'height' : proportion by which to stretch frame height [float]
+                
+        cropmethod:: [str]
+            Method of cropping video.  cropmethod takes the following values:
+                None : No cropping 
+                'Box' : Create box selection tool for cropping video
+                
+        batch:: [bool]
+            Dictates whether batch processing is being performed.  True/False
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        image:: [holoviews.Image]
+            Holoviews hv.Image displaying first frame
+            
+        stream:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `stream.data` contains x and y coordinates of crop
+            boundary vertices.
+            
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video file/files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing whole 
+                        video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be 
+                              batch processed.  [list]
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - in the case of batch processing, video_dict['file'] is set to first 
+          video in file 
+        - prior cropping method HLine has been removed
+    
+    """   
+    
     #if batch processing, set file to first file to be processed
     if batch:
         video_dict['file'] = video_dict['FileNames'][0]
@@ -59,7 +137,7 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
     except:
         cap.set(1,0)
     ret, frame = cap.read() 
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)   
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cap.release() 
 
     #Make first image reference frame on which cropping can be performed
@@ -83,10 +161,59 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
         return (image*box),box_stream,video_dict  
     
 
+    
+    
+    
 ########################################################################################
 
-
 def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Loops through segment of video file, frame by frame, and calculates number of pixels 
+    per frame whose intensity value changed from prior frame.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        mt_cutoff:: [float]
+            Threshold value for determining magnitude of change sufficient to mark
+            pixel as changing from prior frame.
+                
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.
+                
+        SIGMA:: [float]
+            Sigma value for gaussian filter applied to each image. Passed to 
+            OpenCV `cv2.GuassianBlur`.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Motion:: [numpy.array]
+            Array containing number of pixels per frame whose intensity change from
+            previous frame exceeds `mt_cutoff`. Length is number of frames passed to
+            function to loop through. Value of first index, corresponding to first frame,
+            is set to 0.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -122,23 +249,86 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
     cap.release() #release video
     return(Motion) #return motion values
 
+
+
+
+
 ########################################################################################
 
 def cropframe(frame,crop=None):
-    try: #if crop is supplied
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Crops passed frame with `crop` specification
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        frame:: [numpy.ndarray]
+            2d numpy array 
+        crop:: [hv.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices. Set to None if no cropping supplied.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        frame:: [numpy.ndarray]
+            2d numpy array
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
+    
+    if crop:
         Xs=[crop.data['x0'][0],crop.data['x1'][0]]
         Ys=[crop.data['y0'][0],crop.data['y1'][0]]
         fxmin,fxmax=int(min(Xs)), int(max(Xs))
         fymin,fymax=int(min(Ys)), int(max(Ys))
-    except: #if no cropping is used
+    else:
         fxmin,fxmax=0,frame.shape[1]
         fymin,fymax=0,frame.shape[0]
     return frame[fymin:fymax,fxmin:fxmax]
-     
+ 
+    
+    
+    
 
 ########################################################################################
 
-def Measure_Freezing(Motion,FreezeThresh,MinDuration):
+def Measure_Freezing(Motion,FreezeThresh,MinDuration=0):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Calculates freezing on a frame by frame basis based upon measure of motion.
+
+    -------------------------------------------------------------------------------------
+    Args:
+        Motion:: [numpy.array]
+            Array containing number of pixels per frame whose intensity change from
+            previous frame exceeds `mt_cutoff`. 
+                
+        FreezeThresh:: [float]
+            Threshold value for determining magnitude of activity in `Motion` to designate
+            frame as freezing/not freezing (i.e. if motion is below `FreezeThresh`, animal
+            is likely freezing).
+                
+        MinDuration:: [uint8]
+            Duration for which `Motion` must be below `FreezeThresh` for freezing to be 
+            registered.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Freezing:: [numpy.array]
+            Array defining whether animal is freezing on frame by frame basis.  
+            0 = Not Freezing; 100 = Freezing
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - Although Motion argument is often `Motion` array returned by function 
+          `Measure_Motion`, any unidimensional array could be passed.
+
+    """
 
     #Find frames below thresh
     BelowThresh = (Motion<FreezeThresh).astype(int)
@@ -161,9 +351,67 @@ def Measure_Freezing(Motion,FreezeThresh,MinDuration):
     
     return(Freezing)
 
+
+
+
+
 ########################################################################################
 
 def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Play portion of video back, displaying thresholded video in tandem.
+
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        display_dict:: [dict]
+            Dictionary with the following keys:
+                'start' : start point of video segment in frames [int]
+                'end' : end point of video segment in frames [int]
+                'save_video' : option to save video if desired [bool]
+                               Currently, will be saved at 20 fps even if video 
+                               is something else
+                               
+        Freezing:: [numpy.array]
+            Array defining whether animal is freezing on frame by frame basis.  
+            0 = Not Freezing; 100 = Freezing
+        
+        mt_cutoff:: [float]
+            Threshold value for determining magnitude of change sufficient to mark
+            pixel as changing from prior frame.
+        
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices. Set to None if no cropping supplied.
+            
+        SIGMA:: [float]
+            Sigma value for gaussian filter applied to each image. Passed to 
+            OpenCV `cv2.GuassianBlur`.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Nothing returned
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -185,8 +433,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
 
     #Initialize video storage if desired
     if display_dict['save_video']==True:
-        width = int(frame_new.shape[1])
-        height = int(frame_new.shape[0] * 2)
+        width, height = int(frame_new.shape[1]), int(frame_new.shape[0] * 2)
         fourcc = 0
         writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
                          fourcc, 20.0, (width, height), isColor=False)
@@ -228,10 +475,66 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     _=cv2.waitKey(1) 
     if display_dict['save_video']==True:
         writer.release()
-    
+
+        
+        
+        
+        
 ########################################################################################    
       
 def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Saves frame by frame data for motion and freezing to .csv file
+
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                              
+        Motion:: [numpy.array]
+            Array containing number of pixels per frame whose intensity change from
+            previous frame exceeds `mt_cutoff`. Length is number of frames passed to
+            function to loop through. Value of first index, corresponding to first frame,
+            is set to 0.
+        
+        Freezing:: [numpy.array]
+            Array defining whether animal is freezing on frame by frame basis.  
+            0 = Not Freezing; 100 = Freezing
+        
+        mt_cutoff:: [float]
+            Threshold value for determining magnitude of change sufficient to mark
+            pixel as changing from prior frame.
+                
+        FreezeThresh:: [float]
+            Threshold value for determining magnitude of activity in `Motion` to designate
+            frame as freezing/not freezing.
+                
+        MinDuration:: [uint8]
+            Duration for which `Motion` must be below `FreezeThresh` for freezing to be 
+            registered.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Nothing returned
+        
+    -------------------------------------------------------------------------------------
+    Notes:
+
+
+    """
 
     #Create Dataframe
     DataFrame = pd.DataFrame(
@@ -247,10 +550,74 @@ def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
 
     DataFrame.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_FreezingOutput.csv')
     
+    
+    
+    
+    
 ########################################################################################        
 
 
 def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_dict=None):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Generate binned summary report of feezing and motion based upon user-specified bins.
+    If no bins are specified (bin_dict=None), session average will be returned.
+
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                              
+        Motion:: [numpy.array]
+            Array containing number of pixels per frame whose intensity change from
+            previous frame exceeds `mt_cutoff`. 
+        
+        Freezing:: [numpy.array]
+            Array defining whether animal is freezing on frame by frame basis.  
+            0 = Not Freezing; 100 = Freezing
+                
+        FreezeThresh:: [float]
+            Threshold value for determining magnitude of activity in `Motion` to designate
+            frame as freezing/not freezing.
+                
+        MinDuration:: [uint8]
+            Duration for which `Motion` must be below `FreezeThresh` for freezing to be 
+            registered.
+        
+        mt_cutoff:: [float]
+            Threshold value for determining magnitude of change sufficient to mark
+            pixel as changing from prior frame.
+        
+        bin_dict:: [dict]
+            Dictionary specifying bins.  Dictionary keys should be names of the bins.  
+            Dictionary value for each bin should be a tuple, with the start and end of 
+            the bin, in seconds, relative to the start of the analysis period 
+            (i.e. if start frame is 100, it will be relative to that). If no bins are to 
+            be specified, set bin_dict = None.
+            example = bin_dict = {1:(0,100), 2:(100,200)}
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        df:: [pandas.dataframe]
+            Returns pandas dataframe with binned summary information.
+        
+    -------------------------------------------------------------------------------------
+    Notes:
+
+
+    """
     
     #define bins
     avg_dict = {'all': (0, len(Motion))}
@@ -281,10 +648,55 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_
 
 
 
+
+
 ########################################################################################
 
 
 def Batch_LoadFiles(video_dict):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Populates list of files in directory (`dpath`) that are of the specified file type
+    (`ftype`).  List is held in `video_dict['FileNames']`.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video file/files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing whole 
+                        video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be 
+                              batch processed.  [list]
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
 
     #Get list of video files of designated type
     if os.path.isdir(video_dict['dpath']):
@@ -296,10 +708,75 @@ def Batch_LoadFiles(video_dict):
             path=video_dict['dpath']))
 
         
+        
+        
+        
 ########################################################################################
         
         
-def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA=1):    
+def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA=1):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Run FreezeAnalysis on folder of videos of specified filetype. 
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                              
+        bin_dict:: [dict]
+            Dictionary specifying bins.  Dictionary keys should be names of the bins.  
+            Dictionary value for each bin should be a tuple, with the start and end of 
+            the bin, in seconds, relative to the start of the analysis period 
+            (i.e. if start frame is 100, it will be relative to that). If no bins are to 
+            be specified, set bin_dict = None.
+            example = bin_dict = {1:(0,100), 2:(100,200)}
+        
+        mt_cutoff:: [float]
+            Threshold value for determining magnitude of change sufficient to mark
+            pixel as changing from prior frame.
+        
+        FreezeThresh:: [float]
+            Threshold value for determining magnitude of activity in `Motion` to designate
+            frame as freezing/not freezing.
+                
+        MinDuration:: [uint8]
+            Duration for which `Motion` must be below `FreezeThresh` for freezing to be 
+            registered.
+            
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices. Set to None if no cropping supplied.
+            
+        SIGMA:: [float]
+            Sigma value for gaussian filter applied to each image. Passed to 
+            OpenCV `cv2.GuassianBlur`    
+
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        summary_all:: [pandas.dataframe]
+            Pandas dataframe with binned summary information for all videos
+            processed. If `bin_dict = None`, average freezing and motion for each video
+            will be returned.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
 
     #Loop through files    
     for video_dict['file'] in video_dict['FileNames']:
@@ -326,9 +803,50 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA
     summary_all.to_csv(sum_pathout)
     return summary_all
 
+
+
+
+
 ########################################################################################
 
 def Calibrate(video_dict,cal_pix,SIGMA):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Using empty video (i.e. no animal), find distribution of frame by frame pixel changes.
+    99.99 percentile is printed, and twice this number is recommended threshold for
+    `mt_cutoff`. Additionally, histogram of distribution is returned.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'cal_sec' : number of seconds to calibrate based upon [int]
+        
+        cal_pix:: [int]
+            Number of pixels in frame to base calibration upon. Random selection of 
+            all pixels, sampled with replacement. Note that sampling strategy was
+            implemented to reduce memory load.
+            
+        SIGMA:: [float]
+            Sigma value for gaussian filter applied to each image. Passed to 
+            OpenCV `cv2.GuassianBlur`    
+
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        hist*vline:: [holoviews.Overlay]
+            Holoviews Overlay of hv.Histogram and hv.VLine. Histogram displays
+            distribution of frame by frame intensity changes and vertical line displays
+            suggested motion cutoff.
+            
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -402,6 +920,19 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     return hist*vline
 
 
+
+
+
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
+#OLD STUFF
+########################################################################################
+########################################################################################
+########################################################################################
+########################################################################################
 ########################################################################################
 
 

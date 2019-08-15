@@ -1,17 +1,23 @@
-#
-#List of Functions in LocationTracking_Functions.py
-#
+"""
 
-# LoadAndCrop - 
-# Reference -
-# Locate -
-# TrackLocation -
-# LocationThresh_View -
-# ROI_plot -
-# ROI_Location -
-# Batch_LoadFiles - 
-# Batch_Process -
-# Play Video -
+LIST OF FUNCTIONS
+
+LoadAndCrop  
+Reference
+Locate
+TrackLocation
+LocationThresh_View
+ROI_plot
+ROI_Location
+Battch_LoadFiles
+Batch_Process
+PlayVideo
+
+"""
+
+
+
+
 
 ########################################################################################
 
@@ -32,11 +38,84 @@ from holoviews.streams import Stream, param
 hv.notebook_extension('bokeh')
 warnings.filterwarnings("ignore")
 
+
+
+
+
 ########################################################################################
 
       
 
 def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Loads video and creates interactive cropping tool from first frame. In the 
+    case of batch processing, the first frame of the first video is used. Additionally, 
+    when batch processing, the same cropping parameters will be appplied to every video.  
+    Care should therefore be taken that the region of interest is in the same position across 
+    videos.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch frame width [float]
+                'height' : proportion by which to stretch frame height [float]
+                
+        cropmethod:: [str]
+            Method of cropping video.  cropmethod takes the following values:
+                None : No cropping 
+                'Box' : Create box selection tool for cropping video
+                
+        batch:: [bool]
+            Dictates whether batch processing is being performed.  True/False
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        image:: [holoviews.Image]
+            Holoviews hv.Image displaying first frame
+            
+        stream:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `stream.data` contains x and y coordinates of crop
+            boundary vertices.
+            
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video file/files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing whole 
+                        video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be 
+                              batch processed.  [list]
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - in the case of batch processing, video_dict['file'] is set to first 
+          video in file 
+        - prior cropping method HLine has been removed
+    
+    """
     
     #if batch processing, set file to first file to be processed
     if batch:
@@ -82,10 +161,57 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
         box_stream = streams.BoxEdit(source=box,num_objects=1)     
         return (image*box),box_stream,video_dict
     
+    
+    
+    
 
 ########################################################################################
     
 def Reference(video_dict,crop=None,num_frames=100):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Generates reference frame by taking median of random subset of frames.  This has the 
+    effect of removing animal from frame provided animal is not inactive for >=50% of
+    the video segment.  
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'altfile' : (only specify if used)
+                            filename of alternative video to be used to generate
+                            reference [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.
+        
+        num_frames:: [uint]
+            Number of frames to base reference frame on.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        reference:: [numpy.array]
+            Reference image. Median of random subset of frames.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - If `altfile` is specified, it will be used to generate reference.
+    
+    """
     
     #if batch processing, set file to first file to be processed
     if 'file' not in video_dict.keys():
@@ -137,9 +263,75 @@ def Reference(video_dict,crop=None,num_frames=100):
     reference = np.median(collection,axis=0)
     return reference    
 
+
+
+
+
 ########################################################################################
 
-def Locate(cap,reference,tracking_params,crop=None,prior=None):    
+def Locate(cap,reference,tracking_params,crop=None,prior=None):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Return location of animal in frame, in x/y coordinates. 
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        cap:: [cv2.VideoCapture]
+            OpenCV VideoCapture class instance for video.
+        
+        reference:: [numpy array]
+            Reference image that the current frame is compared to.
+        
+        tracking_params:: [dict]
+            Dictionary with the following keys:
+                'loc_thresh' : Percentile of difference values below which are set to 0. 
+                               After calculating pixel-wise difference between passed 
+                               frame and reference frame, these values are tthresholded 
+                               to make subsequent defining of center of mass more 
+                               reliable. [float between 0-100]
+                'use_window' : Will window surrounding prior location be 
+                               imposed?  Allows changes in area surrounding animal's 
+                               location on previous frame to be more heavily influential
+                               in determining animal's current location.
+                               After finding pixel-wise difference between passed frame 
+                               and reference frame, difference values outside square window 
+                               of prior location will be multiplied by (1 - window_weight), 
+                               reducing their overall influence. [bool]
+                'window_size' : If `use_window=True`, the length of one side of square 
+                                window, in pixels. [uint] 
+                'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
+                                  weight of window surrounding prior locaiton. 
+                                  [float between 0-1]
+        
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.
+        
+        prior:: [list]
+            If window is being used, list of length 2 is passed, where first index is 
+            prior y position, and second index is prior x position.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        ret:: [bool]
+            Specifies whether frame is returned in response to cv2.VideoCapture.read.
+        
+        dif:: [numpy.array]
+            Pixel-wise difference from prior frame, after thresholding and
+            applying window weight.
+        
+        com:: [tuple]
+            Indices of center of mass as tuple in the form: (y,x).
+        
+        frame:: [numpy.array]
+            Original video frame after cropping.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
     
     #attempt to load frame
     ret, frame = cap.read() #read frame
@@ -183,17 +375,82 @@ def Locate(cap,reference,tracking_params,crop=None,prior=None):
     
     else:
         return ret, None, None, frame
-        
+
+    
+    
+    
+    
 ########################################################################################        
 
 def TrackLocation(video_dict,tracking_params,reference,crop=None):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    For each frame in video define location of animal, in x/y coordinates, and distance
+    travelled from previous frame.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                              
+        tracking_params:: [dict]
+            Dictionary with the following keys:
+                'loc_thresh' : Percentile of difference values below which are set to 0. 
+                               After calculating pixel-wise difference between passed 
+                               frame and reference frame, these values are tthresholded 
+                               to make subsequent defining of center of mass more 
+                               reliable. [float between 0-100]
+                'use_window' : Will window surrounding prior location be 
+                               imposed?  Allows changes in area surrounding animal's 
+                               location on previous frame to be more heavily influential
+                               in determining animal's current location.
+                               After finding pixel-wise difference between passed frame 
+                               and reference frame, difference values outside square window 
+                               of prior location will be multiplied by (1 - window_weight), 
+                               reducing their overall influence. [bool]
+                'window_size' : If `use_window=True`, the length of one side of square 
+                                window, in pixels. [uint] 
+                'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
+                                  weight of window surrounding prior locaiton. 
+                                  [float between 0-1]
+         
+        reference:: [numpy.array]
+            Reference image that the current frame is compared to.
+            
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.
+        
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        df:: [pandas.dataframe]
+            Pandas dataframe with frame by frame x and y locations,
+            distance travelled, as well as video information and parameter values.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
           
     #load video
     cap = cv2.VideoCapture(video_dict['fpath'])#set file
     cap.set(1,video_dict['start']) #set starting frame
     cap_max = int(cap.get(7)) #get max frames. 7 is index of total frames
-    cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
-   
+    cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max  
     
     #Initialize vector to store motion values in
     X = np.zeros(cap_max - video_dict['start'])
@@ -222,6 +479,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
             Y = Y[:f] #Amend length of Y vector
             D = D[:f] #Amend length of D vector
             break   
+            
     #release video
     cap.release()
     print('total frames processed: {f}'.format(f=len(D)))
@@ -244,9 +502,85 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
     return df
 
 
+
+
+
 ########################################################################################
 
 def LocationThresh_View(examples,video_dict,reference,tracking_params,crop=None,stretch={'width':1,'height':1}):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Display example tracking with selected parameters for a random subset of frames. 
+    NOTE that because individual frames are analyzed independently, weighting 
+    based upon prior location is not implemented.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        examples:: [uint]
+            The number of frames for location tracking to be tested on.
+        
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                                      
+        reference:: [numpy.array]
+            Reference image that the current frame is compared to.
+            
+        tracking_params:: [dict]
+            Dictionary with the following keys:
+                'loc_thresh' : Percentile of difference values below which are set to 0. 
+                               After calculating pixel-wise difference between passed 
+                               frame and reference frame, these values are tthresholded 
+                               to make subsequent defining of center of mass more 
+                               reliable. [float between 0-100]
+                'use_window' : Will window surrounding prior location be 
+                               imposed?  Allows changes in area surrounding animal's 
+                               location on previous frame to be more heavily influential
+                               in determining animal's current location.
+                               After finding pixel-wise difference between passed frame 
+                               and reference frame, difference values outside square window 
+                               of prior location will be multiplied by (1 - window_weight), 
+                               reducing their overall influence. [bool]
+                'window_size' : If `use_window=True`, the length of one side of square 
+                                window, in pixels. [uint] 
+                'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
+                                  weight of window surrounding prior locaiton. 
+                                  [float between 0-1]
+            
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.
+        
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch height for display purposes
+                'height' : proportion by which to stretch height for display purposes
+        
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        df:: [holoviews.Layout]
+            Returns Holoviews Layout with original images on left and heat plots with 
+            animal's estimated position marked on right.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - if `stretch` values are modified, this will only influence display and not
+          calculation
+    
+    """
     
     #load video
     cap = cv2.VideoCapture(video_dict['fpath'])
@@ -287,9 +621,54 @@ def LocationThresh_View(examples,video_dict,reference,tracking_params,crop=None,
     layout = hv.Layout(images)
     return layout
 
+
+
+
+
 ########################################################################################    
     
 def ROI_plot(reference,region_names,stretch={'width':1,'height':1}):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Creates interactive tool for defining regions of interest, based upon array
+    `region_names`. If `region_names=None`, reference frame is returned but no regions
+    can be drawn.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+
+        reference:: [numpy.array]
+            Reference image that the current frame is compared to.
+            
+        region_names:: [list]
+            List containing names of regions to be drawn.  Should be set to None if no
+            regions are used.
+        
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch height for display purposes 
+                          [float]
+                'height' : proportion by which to stretch height for display purposes
+                           [float]
+        
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        image * poly * dmap:: [holoviews.Overlay]
+            Reference frame that can be drawn upon to define regions of interest.
+        
+        poly_stream:: [hv.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            selection tool. `poly_stream.data` contains x and y coordinates of roi 
+            vertices.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - if `stretch` values are modified, this will only influence dispplay and not
+          calculation
+    
+    """
     
     #get number of objects to be drawn
     nobjects = len(region_names) if region_names else 0 
@@ -325,9 +704,52 @@ def ROI_plot(reference,region_names,stretch={'width':1,'height':1}):
         return (image),None
     
 
+    
+    
+    
 ########################################################################################    
 
 def ROI_Location(reference,location,region_names,poly_stream):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    For each frame, determine which regions of interest the animal is in.  For each
+    region of interest, boolean array is added to `location` dataframe passed, with 
+    column name being the region name.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        reference:: [numpy.array]
+            Reference image that the current frame is compared to.
+        
+        location:: [pandas.dataframe]
+            Pandas dataframe with frame by frame x and y locations,
+            distance travelled, as well as video information and parameter values. 
+            Must contain column names 'X' and 'Y'.
+                                                
+        region_names:: [list]
+            List containing names of regions to be drawn.  Should be set to None if no
+            regions are used.
+            
+        poly_stream:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            selection tool. `poly_stream.data` contains x and y coordinates of roi 
+            vertices.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        location:: [pandas.dataframe]
+            For each region of interest, boolean array is added to `location` dataframe 
+            passed, with column name being the region name. Additionally, under column
+            `ROI_coordinates`, coordinates of vertices of each region of interest are
+            printed. This takes the form of a dictionary of x and y coordinates, e.g.:
+                'xs' : [[region 1 x coords], [region 2 x coords]],
+                'ys' : [[region 1 y coords], [region 2 y coords]]
+                                      
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
 
     #Create ROI Masks
     ROI_masks = {}
@@ -358,10 +780,67 @@ def ROI_Location(reference,location,region_names,poly_stream):
     location['ROI_coordinates']=str(poly_stream.data)
     
     return location
-    
+
+
+
+
+
 ########################################################################################        
     
 def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Generates summary of distance travelled and proportional time spent in each region
+    of interest according to user defined time bins.  If bins are not provided 
+    (`bin_dict=None`), average of entire video segment will be provided.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        location:: [pandas.dataframe]
+            Pandas dataframe with frame by frame x and y locations,
+            distance travelled, as well as video information and parameter values. 
+            Additionally, for each region of interest, boolean array indicating whether 
+            animal is in the given region for each frame.
+      
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                              
+        bin_dict:: [dict]
+            Dictionary specifying bins.  Dictionary keys should be names of the bins.  
+            Dictionary value for each bin should be a tuple, with the start and end of 
+            the bin, in seconds, relative to the start of the analysis period 
+            (i.e. if start frame is 100, it will be relative to that). If no bins are to 
+            be specified, set bin_dict = None.
+            example: bin_dict = {1:(0,100), 2:(100,200)}                             
+            
+        region_names:: [list]
+            List containing names of regions to be drawn.  Should be set to None if no
+            regions are used.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        bins:: [pandas.dataframe]
+            Pandas dataframe with distance travelled and proportional time spent in each 
+            region of interest according to user defined time bins, as well as video 
+            information and parameter values. If no region names are supplied 
+            (`region_names=None`), only distance travelled will be included.
+                                      
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
     
     avg_dict = {'all': (location['Frame'].min(), location['Frame'].max())}
     
@@ -389,9 +868,56 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
     
     return bins
 
+
+
+
+
 ######################################################################################## 
 
 def Batch_LoadFiles(video_dict):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Populates list of files in directory (`dpath`) that are of the specified file type
+    (`ftype`).  List is held in `video_dict['FileNames']`.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename [str]
+                'fps' : frames per second of video file/files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing whole 
+                        video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be 
+                              batch processed.  [list]
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
 
     #Get list of video files of designated type
     if os.path.isdir(video_dict['dpath']):
@@ -402,10 +928,94 @@ def Batch_LoadFiles(video_dict):
         raise FileNotFoundError('{path} not found. Check that directory is correct'.format(
             path=video_dict['dpath']))
 
+        
+        
+        
+        
 ######################################################################################## 
 
 def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
-                  stretch={'width':1,'height':1},crop=None,poly_stream=None):
+                  stretch={'width':1,'height':1},crop=None,poly_stream=None):   
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Run LocationTracking on folder of videos of specified filetype. 
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+        
+        tracking_params:: [dict]
+            Dictionary with the following keys:
+                'loc_thresh' : Percentile of difference values below which are set to 0. 
+                               After calculating pixel-wise difference between passed 
+                               frame and reference frame, these values are tthresholded 
+                               to make subsequent defining of center of mass more 
+                               reliable. [float between 0-100]
+                'use_window' : Will window surrounding prior location be 
+                               imposed?  Allows changes in area surrounding animal's 
+                               location on previous frame to be more heavily influential
+                               in determining animal's current location.
+                               After finding pixel-wise difference between passed frame 
+                               and reference frame, difference values outside square window 
+                               of prior location will be multiplied by (1 - window_weight), 
+                               reducing their overall influence. [bool]
+                'window_size' : If `use_window=True`, the length of one side of square 
+                                window, in pixels. [uint] 
+                'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
+                                  weight of window surrounding prior locaiton. 
+                                  [float between 0-1]
+        
+        bin_dict:: [dict]
+            Dictionary specifying bins.  Dictionary keys should be names of the bins.  
+            Dictionary value for each bin should be a tuple, with the start and end of 
+            the bin, in seconds, relative to the start of the analysis period 
+            (i.e. if start frame is 100, it will be relative to that). If no bins are to 
+            be specified, set bin_dict = None.
+            example: bin_dict = {1:(0,100), 2:(100,200)}  
+                                  
+        region_names:: [list]
+            List containing names of regions to be drawn.  Should be set to None if no
+            regions are used.
+            
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch height for display purposes
+                'height' : proportion by which to stretch height for display purposes                            
+            
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.
+            
+        poly_stream:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            selection tool. `poly_stream.data` contains x and y coordinates of roi 
+            vertices.    
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        layout:: [hv.Layout]
+            Holoviews layout wherein for each session the reference frame is returned
+            with the regions of interest highlightted and the animals location across
+            the session overlaid atop the reference image.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
     
     #get polygon
     if poly_stream != None:
@@ -451,9 +1061,62 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
     layout = hv.Layout(heatmaps)
     return layout
 
+
+
+
+
 ########################################################################################        
 
 def PlayVideo(video_dict,display_dict,location,crop=None):
+    
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Play portion of video back, displaying animal's estimated location
+
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        display_dict:: [dict]
+            Dictionary with the following keys:
+                'start' : start point of video segment in frames [int]
+                'end' : end point of video segment in frames [int]
+                'save_video' : option to save video if desired [bool]
+                               Currently, will be saved at 20 fps even if video 
+                               is something else
+                               
+        location:: [pandas.dataframe]
+            Pandas dataframe with frame by frame x and y locations,
+            distance travelled, as well as video information and parameter values. 
+            Additionally, for each region of interest, boolean array indicating whether 
+            animal is in the given region for each frame. 
+        
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.       
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Nothing returned
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
 
     #Load Video and Set Saving Parameters
     cap = cv2.VideoCapture(video_dict['fpath'])#set file\
@@ -511,6 +1174,8 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     if display_dict['save_video']==True:
         writer.release()
 
+    
+    
     
     
 ########################################################################################        
