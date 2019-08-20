@@ -1076,7 +1076,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
         video_dict['file'] = file #used both to set the path and to store filenames when saving
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), file)
         
-        reference = Reference(video_dict,crop=crop,num_frames=100,batch=True) 
+        reference,image = Reference(video_dict,crop=crop,num_frames=100,batch=True) 
         location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
         if region_names!=None:
             location = ROI_Location(reference,location,region_names,poly_stream)
