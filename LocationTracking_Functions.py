@@ -352,6 +352,11 @@ def Locate(cap,reference,tracking_params,crop=None,prior=None):
                 'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
                                   weight of window surrounding prior locaiton. 
                                   [float between 0-1]
+                'method' : 'abs', 'light', or 'dark'.  If 'abs', absolute difference
+                           between reference and current frame is taken, and thus the 
+                           background of the frame doesn't matter. 'light' specifies that
+                           the animal is lighter than the background. 'dark' specifies that 
+                           the animal is darker than the background. 
         
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
@@ -397,13 +402,19 @@ def Locate(cap,reference,tracking_params,crop=None,prior=None):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = cropframe(frame,crop)
         
-        #find difference from reference and blur
-        dif = np.absolute(frame-reference)
-        dif = dif.astype('uint8')
+        #find difference from reference
+        if tracking_params['method'] == 'abs':
+            dif = np.absolute(frame-reference)
+        elif tracking_params['method'] == 'light':
+            dif = frame-reference
+        elif tracking_params['method'] == 'dark':
+            dif = reference-frame
+        dif = dif.astype('int16')
               
         #apply window
         weight = 1 - tracking_params['window_weight']
         if prior != None and tracking_params['use_window']==True:
+            dif = dif + (dif.min() * -1) #scale so lowest value is 0
             dif_weights = np.ones(dif.shape)*weight
             dif_weights[slice(ymin if ymin>0 else 0, ymax),
                         slice(xmin if xmin>0 else 0, xmax)]=1
@@ -598,6 +609,12 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
                 'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
                                   weight of window surrounding prior locaiton. 
                                   [float between 0-1]
+                'method' : 'abs', 'light', or 'dark'.  If 'abs', absolute difference
+                           between reference and current frame is taken, and thus the 
+                           background of the frame doesn't matter. 'light' specifies that
+                           the animal is lighter than the background. 'dark' specifies that 
+                           the animal is darker than the background. 
+                           
         examples:: [uint]
             The number of frames for location tracking to be tested on.
             
@@ -1020,6 +1037,11 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
                 'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
                                   weight of window surrounding prior locaiton. 
                                   [float between 0-1]
+                'method' : 'abs', 'light', or 'dark'.  If 'abs', absolute difference
+                           between reference and current frame is taken, and thus the 
+                           background of the frame doesn't matter. 'light' specifies that
+                           the animal is lighter than the background. 'dark' specifies that 
+                           the animal is darker than the background. 
         
         bin_dict:: [dict]
             Dictionary specifying bins.  Dictionary keys should be names of the bins.  
