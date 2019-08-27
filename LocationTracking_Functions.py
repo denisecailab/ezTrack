@@ -14,6 +14,7 @@ Battch_LoadFiles
 Batch_Process
 PlayVideo
 showtrace
+DistanceTool
 
 """
 
@@ -32,6 +33,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import warnings
+import functools as fct
 from scipy import ndimage
 import holoviews as hv
 from holoviews import opts
@@ -548,7 +550,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
      'Frame': np.arange(len(D)),
      'X': X,
      'Y': Y,
-     'Distance': D
+     'Distance_px': D
     })
        
     return df
@@ -911,15 +913,15 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
     bins = (pd.Series(bin_dict).rename('range(f)')
             .reset_index().rename(columns=dict(index='bin')))
     
-    bins['Distance'] = bins['range(f)'].apply(
-        lambda r: location[location['Frame'].between(*r)]['Distance'].sum())
+    bins['Distance_px'] = bins['range(f)'].apply(
+        lambda r: location[location['Frame'].between(*r)]['Distance_px'].sum())
     if region_names is not None:
         bins_reg = bins['range(f)'].apply(
             lambda r: location[location['Frame'].between(*r)][region_names].mean())
         bins = bins.join(bins_reg)
-        drp_cols = ['Distance', 'Frame', 'X', 'Y'] + region_names
+        drp_cols = ['Distance_px', 'Frame', 'X', 'Y'] + region_names
     else:
-        drp_cols = ['Distance', 'Frame', 'X', 'Y']
+        drp_cols = ['Distance_px', 'Frame', 'X', 'Y']
     bins = pd.merge(
         location.drop(drp_cols, axis='columns'),
         bins,
@@ -994,8 +996,9 @@ def Batch_LoadFiles(video_dict):
         
 ######################################################################################## 
 
-def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
-                  stretch={'width':1,'height':1},crop=None,poly_stream=None):   
+def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None, 
+                  scale_dict=None, dist=None, stretch={'width':1,'height':1}, 
+                  crop=None,poly_stream=None):   
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1054,6 +1057,19 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
         region_names:: [list]
             List containing names of regions to be drawn.  Should be set to None if no
             regions are used.
+        
+        scale_dict:: [dict]
+            Dictionary with the following keys:
+                'distance' : distance between reference points, in desired scale 
+                             (e.g. cm) [numeric]
+                'scale' : string containing name of scale (e.g. 'cm') [str]
+                'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
+        
+        dist:: [dict]
+            Dictionary with the following keys:
+                'd' : Euclidean distance between two reference points, in pixel units, 
+                      rounded to thousandth. Returns None if no less than 2 points have 
+                      been selected. [numeric]
             
         stretch:: [dict]
             Dictionary with the following keys:
@@ -1091,7 +1107,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
             lst.append( [ (x[vert],y[vert]) for vert in range(len(x)) ] )
         poly = hv.Polygons(lst).opts(fill_alpha=0.1,line_dash='dashed')
     
-    heatmaps = []
+    tracks = []
     for file in video_dict['FileNames']:
         
         print ('Processing File: {f}'.format(f=file))  
@@ -1102,28 +1118,32 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names,
         location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
         if region_names!=None:
             location = ROI_Location(reference,location,region_names,poly_stream)
+        if 'scale_dict' in locals():
+            location = ScaleDistance(scale_dict, dist, df=location, column='Distance_px')
         location.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv')
         file_summary = Summarize_Location(location, video_dict, bin_dict=bin_dict, region_names=region_names)
                
-        try: #Add summary info for individual file to larger summary of all files
+        try: 
             summary_all = pd.concat([summary_all,file_summary])
-        except NameError: #to be done for first file in list, before summary_all is created
+        except NameError: 
             summary_all = file_summary
+        if 'scale_dict' in locals():
+            summary_all = ScaleDistance(scale_dict, dist, df=summary_all, column='Distance_px')
         
-        #Plot Heat Map
+        #Plot Tracks
         image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference)).opts(
         width=int(reference.shape[1]*stretch['width']),
         height=int(reference.shape[0]*stretch['height']),
         invert_yaxis=True,cmap='gray',toolbar='below',
         title=file+": Motion Trace")
         points = hv.Scatter(np.array([location['X'],location['Y']]).T).opts(color='navy',alpha=.2)
-        heatmaps.append(image*poly*points) if poly_stream!=None else heatmaps.append(image*points)
+        tracks.append(image*poly*points) if poly_stream!=None else heatmaps.append(image*points)
 
     #Write summary data to csv file
     sum_pathout = os.path.join(os.path.normpath(video_dict['dpath']), 'BatchSummary.csv')
     summary_all.to_csv(sum_pathout)
     
-    layout = hv.Layout(heatmaps)
+    layout = hv.Layout(tracks)
     return layout
 
 
@@ -1275,6 +1295,141 @@ def showtrace(reference,location,color="red",alpha=.8,size=3):
 
 
 
+
+########################################################################################    
+
+def DistanceTool(reference,stretch={'width':1,'height':1}):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Creates interactive tool for measuring length between two points, in pixel units, in 
+    order to ease process of converting pixel distance measurements to some other scale.
+    Use point drawing tool to calculate distance beteen any two popints.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+
+        reference:: [numpy.array]
+            Reference image or other 2d image.
+        
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch height for display purposes 
+                          [float]
+                'height' : proportion by which to stretch height for display purposes
+                           [float]
+        
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        image * points * dmap:: [holoviews.Overlay]
+            Reference frame that can be drawn upon to define 2 points, the distance 
+            between which will be measured and displayed.
+        
+        distance:: [dict]
+            Dictionary with the following keys:
+                'd' : Euclidean distance between two reference points, in pixel units, 
+                      rounded to thousandth. Returns None if no less than 2 points have 
+                      been selected.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - if `stretch` values are modified, this will only influence dispplay and not
+          calculation
+    
+    """
+
+    #Make reference image the base image on which to draw
+    image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference))
+    image.opts(width=int(reference.shape[1]*stretch['width']),
+               height=int(reference.shape[0]*stretch['height']),
+              invert_yaxis=True,cmap='gray',
+              colorbar=True,
+               toolbar='below',
+              title="Calculate Distance")
+
+    #Create Point instance on which to draw and connect via stream to pointDraw drawing tool 
+    points = hv.Points([]).opts(active_tools=['point_draw'], color='red',size=10)
+    pointDraw_stream = streams.PointDraw(source=points,num_objects=2) 
+    
+    def markers(data, distance):
+        try:
+            x_ls, y_ls = data['x'], data['y']
+        except TypeError:
+            x_ls, y_ls = [], []
+        
+        x_ctr, y_ctr = np.mean(x_ls), np.mean(y_ls)
+        if len(x_ls) > 1:
+            x_dist = (x_ls[0] - x_ls[1])
+            y_dist = (y_ls[0] - y_ls[1])
+            distance['d'] = np.around( (x_dist**2 + y_dist**2)**(1/2), 3)
+            text = "{dist} px".format(dist=distance['d'])
+        return hv.Labels((x_ctr, y_ctr, text if len(x_ls) > 1 else "")).opts(
+            text_color='blue',text_font_size='14pt')
+    
+    distance = dict(d=None)
+    markers_ptl = fct.partial(markers, distance=distance)
+    dmap = hv.DynamicMap(markers_ptl, streams=[pointDraw_stream])
+    return (image * points * dmap), distance
+
+
+
+
+
+########################################################################################    
+
+def ScaleDistance(scale_dict, dist=None, df=None, column=None):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Adds column to dataframe by multiplying existing column by scaling factor to change
+    scale. Used in order to convert distance from pixel scale to desired real world 
+    distance scale.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+
+        scale_dict:: [dict]
+            Dictionary with the following keys:
+                'distance' : distance between reference points, in desired scale 
+                             (e.g. cm) [numeric]
+                'scale' : string containing name of scale (e.g. 'cm') [str]
+                'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
+        
+        dist:: [dict]
+            Dictionary with the following keys:
+                'd' : Euclidean distance between two reference points, in pixel units, 
+                      rounded to thousandth. Returns None if no less than 2 points have 
+                      been selected. [numeric]
+        
+        df:: [pandas.dataframe]
+            Pandas dataframe with column to be scaled.
+        
+        column:: [str]
+            Name of column in df to be scaled
+        
+    -------------------------------------------------------------------------------------
+    Returns:
+        df:: [pandas.dataframe]
+            Pandas dataframe with column of scaled distance values.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - if `stretch` values are modified, this will only influence dispplay and not
+          calculation
+    
+    """
+
+    if dist['d']!= None:
+        scale_dict['factor'] = scale_dict['distance']/dist['d']
+        new_column = "_".join(['Distance', scale_dict['scale']])
+        df[new_column] = df[column]*scale_dict['factor']
+        order = [column for column in df if column not in [new_column]] + [new_column]
+        df = df[order]
+    else:
+        print('Distance between reference points undefined. Cannot scale column: {c}.\
+        Returning original dataframe'.format(c=column))
+    return df
 
 ########################################################################################        
 #Code to export svg
