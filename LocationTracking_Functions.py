@@ -10,11 +10,13 @@ TrackLocation
 LocationThresh_View
 ROI_plot
 ROI_Location
-Battch_LoadFiles
+Batch_LoadFiles
 Batch_Process
 PlayVideo
 showtrace
+Heatmap
 DistanceTool
+ScaleDistance
 
 """
 
@@ -1288,9 +1290,67 @@ def showtrace(reference,location,color="red",alpha=.8,size=3):
                            height=int(reference.shape[0]),
                            invert_yaxis=True,cmap='gray',toolbar='below',
                            title="Motion Trace")
-    points = hv.Scatter(np.array([location['X'],location['Y']]).T).opts(color='red',alpha=.5,size=3)
+    points = hv.Scatter(np.array([location['X'],location['Y']]).T).opts(color='red',alpha=alpha,size=size)
     trace = image*points
     return trace
+
+
+
+
+
+########################################################################################    
+
+def Heatmap (reference, location, sigma=None, stretch = dict(width=1,height=1)):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Create heatmap of relative time in each location. Max value is set to maxiumum
+    in any one location.
+
+    -------------------------------------------------------------------------------------
+    Args:
+        
+        reference:: [numpy array]
+            Reference image that the current frame is compared to.
+        
+        location:: [pandas.dataframe]
+            Pandas dataframe with frame by frame x and y locations,
+            distance travelled, as well as video information and parameter values. 
+                
+        sigma:: [numeric]
+            Optional number specifying sigma of guassian filter
+                               
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch height for display purposes
+                'height' : proportion by which to stretch height for display purposes      
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        map_i:: [holoviews.Image]
+            Heatmap image
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        stretch only affects display
+
+    """    
+    heatmap = np.zeros(reference.shape)
+    for frame in range(len(location)):
+        Y,X = int(location.Y[frame]), int(location.X[frame])
+        heatmap[Y,X]+=1
+    
+    sigma = np.mean(heatmap.shape)*.05 if sigma == None else sigma
+    heatmap = cv2.GaussianBlur(heatmap,(0,0),sigma)
+    heatmap = (heatmap / heatmap.max())*255
+    
+    map_i = hv.Image((np.arange(heatmap.shape[1]), np.arange(heatmap.shape[0]), heatmap))
+    map_i.opts(width=int(heatmap.shape[1]*stretch['width']),
+           height=int(heatmap.shape[0]*stretch['height']),
+           invert_yaxis=True, cmap='jet', alpha=1,
+           colorbar=False, toolbar='below', title="Heatmap")
+    
+    return map_i
 
 
 
@@ -1430,6 +1490,11 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
         print('Distance between reference points undefined. Cannot scale column: {c}.\
         Returning original dataframe'.format(c=column))
     return df
+
+
+#order = [c for c in location if c not in ['Distance_px']]
+#pos = order.index('ROI_coordinates')+1
+#order[0:pos]+['hi']+order[pos:]
 
 ########################################################################################        
 #Code to export svg
