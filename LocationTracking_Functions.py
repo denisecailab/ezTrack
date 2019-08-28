@@ -1484,17 +1484,15 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
         scale_dict['factor'] = scale_dict['distance']/dist['d']
         new_column = "_".join(['Distance', scale_dict['scale']])
         df[new_column] = df[column]*scale_dict['factor']
-        order = [column for column in df if column not in [new_column]] + [new_column]
+        order = [col for col in df if col not in [new_column]] #+ [new_column]
+        pos = order.index(column)+1
+        order = order[0:pos]+[new_column]+order[pos:]
         df = df[order]
     else:
         print('Distance between reference points undefined. Cannot scale column: {c}.\
         Returning original dataframe'.format(c=column))
     return df
 
-
-#order = [c for c in location if c not in ['Distance_px']]
-#pos = order.index('ROI_coordinates')+1
-#order[0:pos]+['hi']+order[pos:]
 
 ########################################################################################        
 #Code to export svg
