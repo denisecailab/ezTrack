@@ -1090,6 +1090,12 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
     
     -------------------------------------------------------------------------------------
     Returns:
+        summary_all:: [pandas.dataframe]
+            Pandas dataframe with distance travelled and proportional time spent in each 
+            region of interest according to user defined time bins, as well as video 
+            information and parameter values. If no region names are supplied 
+            (`region_names=None`), only distance travelled will be included.
+            
         layout:: [hv.Layout]
             Holoviews layout wherein for each session the reference frame is returned
             with the regions of interest highlightted and the animals location across
@@ -1100,53 +1106,39 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
     
     """
     
-    #get polygon
-    if poly_stream != None:
-        lst = []
-        for poly in range(len(poly_stream.data['xs'])):
-            x = np.array(poly_stream.data['xs'][poly]) #x coordinates
-            y = np.array(poly_stream.data['ys'][poly]) #y coordinates
-            lst.append( [ (x[vert],y[vert]) for vert in range(len(x)) ] )
-        poly = hv.Polygons(lst).opts(fill_alpha=0.1,line_dash='dashed')
-    
-    tracks = []
+    images = []
     for file in video_dict['FileNames']:
         
         print ('Processing File: {f}'.format(f=file))  
-        video_dict['file'] = file #used both to set the path and to store filenames when saving
+        video_dict['file'] = file 
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), file)
         
         reference,image = Reference(video_dict,crop=crop,num_frames=100,batch=True) 
         location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
         if region_names!=None:
             location = ROI_Location(reference,location,region_names,poly_stream)
-        if 'scale_dict' in locals():
+        if scale_dict!=None:
             location = ScaleDistance(scale_dict, dist, df=location, column='Distance_px')
         location.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv')
         file_summary = Summarize_Location(location, video_dict, bin_dict=bin_dict, region_names=region_names)
                
         try: 
-            summary_all = pd.concat([summary_all,file_summary])
+            summary_all = pd.concat([summary_all,file_summary],sort=False)
         except NameError: 
             summary_all = file_summary
-        if 'scale_dict' in locals():
+        if scale_dict!=None:
             summary_all = ScaleDistance(scale_dict, dist, df=summary_all, column='Distance_px')
         
-        #Plot Tracks
-        image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference)).opts(
-        width=int(reference.shape[1]*stretch['width']),
-        height=int(reference.shape[0]*stretch['height']),
-        invert_yaxis=True,cmap='gray',toolbar='below',
-        title=file+": Motion Trace")
-        points = hv.Scatter(np.array([location['X'],location['Y']]).T).opts(color='navy',alpha=.2)
-        tracks.append(image*poly*points) if poly_stream!=None else heatmaps.append(image*points)
+        trace = showtrace(reference,location,poly_stream)
+        heatmap = Heatmap(reference, location, sigma=None)
+        images = images + [(trace.opts(title=file)), (heatmap.opts(title=file))]
 
     #Write summary data to csv file
     sum_pathout = os.path.join(os.path.normpath(video_dict['dpath']), 'BatchSummary.csv')
     summary_all.to_csv(sum_pathout)
     
-    layout = hv.Layout(tracks)
-    return layout
+    layout = hv.Layout(images)
+    return summary_all, layout
 
 
 
@@ -1249,7 +1241,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     
 ########################################################################################
 
-def showtrace(reference,location,color="red",alpha=.8,size=3):
+def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1264,7 +1256,12 @@ def showtrace(reference,location,color="red",alpha=.8,size=3):
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
             distance travelled, as well as video information and parameter values. 
-                
+        
+        poly_stream:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            selection tool. `poly_stream.data` contains x and y coordinates of roi 
+            vertices.
+            
         color:: [str]
             Color of trace.  See Holoviews documentation for color options
                                
@@ -1276,13 +1273,23 @@ def showtrace(reference,location,color="red",alpha=.8,size=3):
     
     -------------------------------------------------------------------------------------
     Returns:
-        Nothing returned
+        holoviews.Overlay
+            Location of animal superimposed upon reference. If poly_stream is passed
+            than regions of interest will also be outlined.
     
     -------------------------------------------------------------------------------------
     Notes:
 
     """
     
+    if poly_stream != None:
+        lst = []
+        for poly in range(len(poly_stream.data['xs'])):
+            x = np.array(poly_stream.data['xs'][poly]) #x coordinates
+            y = np.array(poly_stream.data['ys'][poly]) #y coordinates
+            lst.append( [ (x[vert],y[vert]) for vert in range(len(x)) ] )
+        poly = hv.Polygons(lst).opts(fill_alpha=0.1,line_dash='dashed')
+        
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]),
                       reference)
@@ -1290,9 +1297,10 @@ def showtrace(reference,location,color="red",alpha=.8,size=3):
                            height=int(reference.shape[0]),
                            invert_yaxis=True,cmap='gray',toolbar='below',
                            title="Motion Trace")
+    
     points = hv.Scatter(np.array([location['X'],location['Y']]).T).opts(color='red',alpha=alpha,size=size)
-    trace = image*points
-    return trace
+    
+    return (image*poly*points) if poly_stream!=None else (image*points)
 
 
 
@@ -1484,9 +1492,8 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
         scale_dict['factor'] = scale_dict['distance']/dist['d']
         new_column = "_".join(['Distance', scale_dict['scale']])
         df[new_column] = df[column]*scale_dict['factor']
-        order = [col for col in df if col not in [new_column]] #+ [new_column]
-        pos = order.index(column)+1
-        order = order[0:pos]+[new_column]+order[pos:]
+        order = [col for col in df if col not in [column,new_column]]
+        order = order + [column,new_column]
         df = df[order]
     else:
         print('Distance between reference points undefined. Cannot scale column: {c}.\
