@@ -43,7 +43,7 @@ warnings.filterwarnings("ignore")
 
 ########################################################################################        
 
-def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
+def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -79,8 +79,9 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
                 None : No cropping 
                 'Box' : Create box selection tool for cropping video
                 
-        batch:: [bool]
-            Dictates whether batch processing is being performed.  True/False
+        fstfile:: [bool]
+            Dictates whether to use first file in video_dict['FileNames'] to generate
+            reference.  True/False
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -115,8 +116,7 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
     """   
     
     #if batch processing, set file to first file to be processed
-    if batch:
-        video_dict['file'] = video_dict['FileNames'][0]
+    video_dict['file'] = video_dict['FileNames'][0] if fstfile else video_dict['file']   
         
     #Upoad file and check that it exists
     video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])
