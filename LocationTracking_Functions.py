@@ -50,7 +50,7 @@ warnings.filterwarnings("ignore")
 
 ########################################################################################    
 
-def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=False):
+def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -86,8 +86,9 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
                 None : No cropping 
                 'Box' : Create box selection tool for cropping video
                 
-        batch:: [bool]
-            Dictates whether batch processing is being performed.  True/False
+        fstfile:: [bool]
+            Dictates whether to use first file in video_dict['FileNames'] to generate
+            reference.  True/False
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -122,8 +123,7 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,batch=
     """
     
     #if batch processing, set file to first file to be processed
-    if batch:
-        video_dict['file'] = video_dict['FileNames'][0] 
+    video_dict['file'] = video_dict['FileNames'][0] if fstfile else video_dict['file']      
     
     #Upoad file and check that it exists
     video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])
@@ -211,7 +211,7 @@ def cropframe(frame,crop=None):
 
 ########################################################################################
 
-def Reference(video_dict,crop=None,num_frames=100,altfile=False,batch=False):
+def Reference(video_dict,crop=None,num_frames=100,altfile=False,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -251,8 +251,9 @@ def Reference(video_dict,crop=None,num_frames=100,altfile=False,batch=False):
             used to generate reference frame. If `altfile=True`, it is expected
             that `video_dict` contains `altfile` key.
         
-        batch:: [bool]
-            Dictates whether batch processing is being performed.  True/False
+        fstfile:: [bool]
+            Dictates whether to use first file in video_dict['FileNames'] to generate
+            reference.  True/False
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -267,10 +268,8 @@ def Reference(video_dict,crop=None,num_frames=100,altfile=False,batch=False):
     
     """
     
-    #if batch processing, set file to first file to be processed
-    video_dict['file'] = video_dict['FileNames'][0] if batch else video_dict['file']      
-    
-    #get correct ref video
+    #set file to use for reference
+    video_dict['file'] = video_dict['FileNames'][0] if fstfile else video_dict['file']      
     vname = video_dict.get("altfile","") if altfile else video_dict['file']    
     fpath = os.path.join(os.path.normpath(video_dict['dpath']), vname)
     if os.path.isfile(fpath):
@@ -392,7 +391,7 @@ def Locate(cap,reference,tracking_params,crop=None,prior=None):
     """
     
     #attempt to load frame
-    ret, frame = cap.read() #read frame
+    ret, frame = cap.read() 
     
     #set window dimensions
     if prior != None and tracking_params['use_window']==True:
@@ -402,7 +401,6 @@ def Locate(cap,reference,tracking_params,crop=None,prior=None):
 
     if ret == True:
         
-        #load frame and crop
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = cropframe(frame,crop)
         
@@ -1113,8 +1111,9 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
         video_dict['file'] = file 
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), file)
         
-        reference,image = Reference(video_dict,crop=crop,num_frames=100,batch=True) 
+        reference,image = Reference(video_dict,crop=crop,num_frames=100) 
         location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
+        
         if region_names!=None:
             location = ROI_Location(reference,location,region_names,poly_stream)
         if scale_dict!=None:
