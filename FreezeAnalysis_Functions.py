@@ -128,14 +128,14 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
             file=video_dict['fpath']))
 
     #Get maxiumum frame of file. Note that max frame is updated later if fewer frames detected
-    cap_max = int(cap.get(7)) #7 is index of total frames
+    cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     print('total frames: {frames}'.format(frames=cap_max))
 
     #Set first frame. 
     try:
-        cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
+        cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']) 
     except:
-        cap.set(1,0)
+        cap.set(cv2.CAP_PROP_POS_FRAMES,0)
     ret, frame = cap.read() 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cap.release() 
@@ -217,9 +217,9 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
-    cap_max = int(cap.get(7)) #7 is index of total frames
+    cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
-    cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
+    cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']) 
 
     #Initialize first frame and array to store motion values in
     ret, frame_new = cap.read()
@@ -415,7 +415,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
     rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
-    cap.set(1,video_dict['start']+display_dict['start']) #set reference position of first frame 
+    cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
 
     #set text parameters
     textfont = cv2.FONT_HERSHEY_SIMPLEX
@@ -857,7 +857,7 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     cal_dif = np.zeros((cal_frames,cal_pix))
 
     #Initialize video
-    cap.set(1,0) #first index references frame property, second specifies next frame to grab
+    cap.set(cv2.CAP_PROP_POS_FRAMES,0) 
 
     #Initialize first frame
     ret, frame = cap.read()

@@ -135,11 +135,11 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
             file=video_dict['fpath']))
 
     #Get maxiumum frame of file. Note that max frame is updated later if fewer frames detected
-    cap_max = int(cap.get(7)) #7 is index of total frames
+    cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     print('total frames: {frames}'.format(frames=cap_max))
 
     #Set first frame
-    cap.set(1,video_dict['start']) #first index references frame property, second specifies next frame to grab
+    cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
     ret, frame = cap.read() 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)   
     cap.release()
@@ -276,14 +276,14 @@ def Reference(video_dict,crop=None,num_frames=100,altfile=False,fstfile=False):
         cap = cv2.VideoCapture(fpath)
     else:
         raise FileNotFoundError('File not found. Check that directory and file names are correct.')
-    cap.set(1,0)#first index references frame property, second specifies next frame to grab
+    cap.set(cv2.CAP_PROP_POS_FRAMES,0)
     
     #Get video dimensions with any cropping applied
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     frame = cropframe(frame, crop)
     h,w = frame.shape[0], frame.shape[1]
-    cap_max = int(cap.get(7)) #7 is index of total frames
+    cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
     
     #Collect subset of frames
@@ -292,7 +292,7 @@ def Reference(video_dict,crop=None,num_frames=100,altfile=False,fstfile=False):
         grabbed = False
         while grabbed == False: 
             y=np.random.randint(video_dict['start'],cap_max)
-            cap.set(1,y)#first index references frame property, second specifies next frame to grab
+            cap.set(cv2.CAP_PROP_POS_FRAMES, y)
             ret, frame = cap.read()
             if ret == True:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -502,8 +502,8 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
           
     #load video
     cap = cv2.VideoCapture(video_dict['fpath'])#set file
-    cap.set(1,video_dict['start']) #set starting frame
-    cap_max = int(cap.get(7)) #get max frames. 7 is index of total frames
+    cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']) #set starting frame
+    cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max  
     
     #Initialize vector to store motion values in
@@ -646,7 +646,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
     
     #load video
     cap = cv2.VideoCapture(video_dict['fpath'])
-    cap_max = int(cap.get(7)) #get max frames. 7 is index of total frames
+    cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
     
     #examine random frames
@@ -655,7 +655,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
         
         #analyze frame
         frm=np.random.randint(video_dict['start'],cap_max) #select random frame
-        cap.set(1,frm) #sets frame to be next to be grabbed
+        cap.set(cv2.CAP_PROP_POS_FRAMES,frm) #sets frame to be next to be grabbed
         ret,dif,com,frame = Locate(cap,reference,tracking_params,crop=crop) #get frame difference from reference 
 
         #plot original frame
@@ -1209,8 +1209,8 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                                  isColor=False)
 
     #Initialize video play options   
-    cap.set(1,video_dict['start']+display_dict['start']) #set starting frame
-    rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
+    cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
+    rate = int(1000/video_dict['fps']) 
 
     #Play Video
     for f in range(display_dict['start'],display_dict['stop']):
