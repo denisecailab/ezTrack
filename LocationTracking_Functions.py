@@ -211,7 +211,8 @@ def cropframe(frame,crop=None):
 
 ########################################################################################
 
-def Reference(video_dict,crop=None,num_frames=100,altfile=False,fstfile=False):
+def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100,
+              altfile=False,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -237,6 +238,11 @@ def Reference(video_dict,crop=None,num_frames=100,altfile=False,fstfile=False):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+        
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch frame width [float]
+                'height' : proportion by which to stretch frame height [float]
                 
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
@@ -306,8 +312,8 @@ def Reference(video_dict,crop=None,num_frames=100,altfile=False,fstfile=False):
     reference = np.median(collection,axis=0)
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]), 
-                      reference)).opts(width=int(reference.shape[1]),
-                                       height=int(reference.shape[0]),
+                      reference)).opts(width=int(reference.shape[1])*stretch['width'],
+                                       height=int(reference.shape[0])*stretch['height'],
                                        invert_yaxis=True,
                                        cmap='gray',
                                        colorbar=True,
@@ -997,7 +1003,7 @@ def Batch_LoadFiles(video_dict):
 ######################################################################################## 
 
 def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None, 
-                  scale_dict=None, dist=None, stretch={'width':1,'height':1}, 
+                  stretch={'width':1,'height':1}, scale_dict=None, dist=None, 
                   crop=None,poly_stream=None):   
     """ 
     -------------------------------------------------------------------------------------
@@ -1128,8 +1134,8 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
         if scale_dict!=None:
             summary_all = ScaleDistance(scale_dict, dist, df=summary_all, column='Distance_px')
         
-        trace = showtrace(reference,location,poly_stream)
-        heatmap = Heatmap(reference, location, sigma=None)
+        trace = showtrace(reference,location,poly_stream,stretch=stretch)
+        heatmap = Heatmap(reference, location, sigma=None, stretch=stretch)
         images = images + [(trace.opts(title=file)), (heatmap.opts(title=file))]
 
     #Write summary data to csv file
@@ -1240,7 +1246,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     
 ########################################################################################
 
-def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3):
+def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3,stretch=dict(width=1,height=1)):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1292,8 +1298,8 @@ def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3)
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]),
                       reference)
-                    ).opts(width=int(reference.shape[1]),
-                           height=int(reference.shape[0]),
+                    ).opts(width=int(reference.shape[1])*stretch['width'],
+                           height=int(reference.shape[0])*stretch['height'],
                            invert_yaxis=True,cmap='gray',toolbar='below',
                            title="Motion Trace")
     
@@ -1307,7 +1313,7 @@ def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3)
 
 ########################################################################################    
 
-def Heatmap (reference, location, sigma=None, stretch = dict(width=1,height=1)):
+def Heatmap (reference, location, sigma=None, stretch=dict(width=1,height=1)):
     """ 
     -------------------------------------------------------------------------------------
     
