@@ -30,10 +30,11 @@ The iPython scripts included in this repository require the following packages t
 
 4. Activate the ezTrack Conda environment from the command line terminal on your computer.  On OSX/Linux, use your finder to open Terminal and enter the command: `source activate ezTrack`.  On a Windows os, search for 'Anaconda Prompt'.  Once open, enter the command `conda activate ezTrack`.  
 
-5. Launch Jupyter Notebook from Terminal/Anaconda Prompt (command: `jupyter notebook`).  We have included jupyter notebook installation in the Conda environment installation.
+5. Launch Jupyter Notebook from Terminal/Anaconda Prompt (command: `jupyter notebook`). 
+
 **Note that steps 4-5 must be done fresh each time ezTrack is used on your computer.
 
-6. **From within Jupyter Notebook**, navigate to the ezTrack folder you downloaded and opend the desired .ipynb file.  You can now run the code!  If you're new to Jupyter Notebook, you might check out some online tutorials.  There are tons.  [Here's one very simple one.](https://nbviewer.jupyter.org/github/jupyter/notebook/blob/master/docs/source/examples/Notebook/Notebook%20Basics.ipynb)
+6. **From within Jupyter Notebook**, navigate to the ezTrack folder you downloaded and open the desired .ipynb file.  You can now run the code!  If you're new to Jupyter Notebook, you might check out some online tutorials.  There are tons.  [Here's one very simple one.](https://nbviewer.jupyter.org/github/jupyter/notebook/blob/master/docs/source/examples/Notebook/Notebook%20Basics.ipynb)
 
 # Location Tracking Module
 The location tracking module allows for the analysis of a single animal's location on a frame by frame basis.  In addition to providing the user the with the ability to crop the portion of the video frame in which the animal will be, it also allows the user to specify regions of interest (e.g. left and right sides) and provides tools to quantify the time spent in each region, as well as distance travelled.  
