@@ -63,7 +63,7 @@ The freeze analysis module allows the user to automatically score an animal's mo
 As of yet, mpg1, wmv, and avi (mp4 codec) all work.  Many more should work but have not yet been tested.  
 
 ## Running Code
-After downloading the files onto your local computer in a single folder, from the terminal activate the necessary Conda environment (```source activate ezTrack``` // in windows: ```conda activate ezTrack```) and open Jupyter Notebook (```jupyter notebook```), then navigate to the files on your computer. The individual scripts contain more detailed instructions.
+After downloading the files onto your local computer in a single folder, from the Terminal/Anaconda Prompt activate the necessary Conda environment (```source activate ezTrack``` // in windows: ```conda activate ezTrack```) and open Jupyter Notebook (```jupyter notebook```), then navigate to the files on your computer. The individual scripts contain more detailed instructions.
 
 ## Web Browser Compatibility
 We have most extensively tested ezTrack using Chrome, and Firefox to a lesser extent.  Some issues have been found with Internet Explorer and we recommend that it be avoided when usng ezTrack.
