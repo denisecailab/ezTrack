@@ -24,7 +24,7 @@ The iPython scripts included in this repository require the following packages t
     
     c. When prompted with “Proceed ([y]/n)? Type in `y` and hit enter.
     
-    d. The ezTrack Conda Environment is now uninstalled.
+    d. The ezTrack Conda Environment is now installed.
 
 3. From the ezTrack github page, download all files onto your computer. On the main page of the repository, click the button to ‘Clone or download’, and download the zip folder onto your hard drive (don't forget to unzip the folder). The unzipped folder is called ezTrack-master and contains all files necessary to run ezTrack.  Alternatively, use git commands if you are familiar with them (`git clone https://github.com/DeniseCaiLab/ezTrack.git`)
 
