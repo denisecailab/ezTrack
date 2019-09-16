@@ -28,18 +28,18 @@ The freeze analysis module allows the user to automatically score an animal's mo
 
 ## Installation and Package Requirements
 The iPython scripts included in this repository require the following packages to be installed in your Conda environment.  Although the package versions used during development are listed it is likely that latest releases of all will be fine to use:
-* python (3.6)
-* jupyter
-* numpy(1.15.2)
-* pandas(0.23.0)
-* matplotlib(3.0.3) 
-* opencv(3.4.3)
-* holoviews (1.12.1)
+* python (3.6.7)
+* jupyter (1.0.0)
+* numpy (1.15.2)
+* pandas (0.23.0)
+* matplotlib (3.1.1) 
+* opencv (3.4.3)
+* holoviews (1.12.3)
 * scipy (1.2.1)
 
 Provided you have installed miniconda (see **[Getting Started](https://github.com/DeniseCaiLab/GettingStarted)** for more details), the following command can be executed in your terminal to create the environment:
 
-```conda create -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib opencv=3.4.3 jupyter holoviews scipy```
+```conda create -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.12.3 scipy=1.2.1```
 
 ## Video requirements
 As of yet, mpg1, wmv, and avi (mp4 codec) all work.  Many more should work but have not yet been tested.  
