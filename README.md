@@ -28,7 +28,7 @@ The iPython scripts included in this repository require the following packages t
 
 3. From the ezTrack github page, download all files onto your computer. On the main page of the repository, click the button to ‘Clone or download’, and download the zip folder onto your hard drive (don't forget to unzip the folder). The unzipped folder is called ezTrack-master and contains all files necessary to run ezTrack.  Alternatively, use git commands if you are familiar with them (`git clone https://github.com/DeniseCaiLab/ezTrack.git`)
 
-4. Activate the ezTrack Conda environment from the command line terminal on your computer.  On OSX/Linux, use your finder to open Terminal and enter the command: `source activate ezTrack`.  On a Windows os, search for 'Anaconda Prompt'.  Once open, enter the command `conda activate ezTrack`.  
+4. Activate the ezTrack Conda environment from Terminal/Anaconda Prompt.  On OSX/Linux, use your finder to open Terminal and enter the command: `source activate ezTrack`.  On a Windows os, search for 'Anaconda Prompt'.  Once open, enter the command `conda activate ezTrack`.  
 
 5. Launch Jupyter Notebook from Terminal/Anaconda Prompt (command: `jupyter notebook`). 
 
