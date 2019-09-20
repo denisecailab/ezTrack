@@ -910,15 +910,14 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
     
     """
     
-    avg_dict = {'all': (location['Frame'].min(), location['Frame'].max())}
+    #define bins
+    avg_dict = {'all': (location['Frame'].min(), location['Frame'].max())}   
+    bin_dict = bin_dict if bin_dict is not None else avg_dict
+    #bin_dict = {k: tuple((np.array(v) * video_dict['fps']).tolist()) for k, v in bin_dict.items()}
     
-    try:
-        bin_dict = {k: tuple((np.array(v) * video_dict['fps']).tolist()) for k, v in bin_dict.items()}
-    except AttributeError:
-        bin_dict = avg_dict
+    #get summary info
     bins = (pd.Series(bin_dict).rename('range(f)')
-            .reset_index().rename(columns=dict(index='bin')))
-    
+            .reset_index().rename(columns=dict(index='bin')))    
     bins['Distance_px'] = bins['range(f)'].apply(
         lambda r: location[location['Frame'].between(*r)]['Distance_px'].sum())
     if region_names is not None:

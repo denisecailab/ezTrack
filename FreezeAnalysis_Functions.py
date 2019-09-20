@@ -620,10 +620,8 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_
     
     #define bins
     avg_dict = {'all': (0, len(Motion))}
-    try:
-        bin_dict = {k: tuple((np.array(v) * video_dict['fps']).tolist()) for k, v in bin_dict.items()}
-    except AttributeError:
-        bin_dict = avg_dict 
+    bin_dict = bin_dict if bin_dict is not None else avg_dict
+    #bin_dict = {k: tuple((np.array(v) * video_dict['fps']).tolist()) for k, v in bin_dict.items()}
     
     #get means
     bins = (pd.Series(bin_dict).rename('range(f)')
