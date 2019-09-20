@@ -71,4 +71,3 @@ We have most extensively tested ezTrack using Chrome, and Firefox to a lesser ex
 ## Why Conda? What is a Conda Environment?
 Conda is a package and environment manager that provides a convenient way to utilize different versions of software and software packages for different applications, solving compatibility issues.  To give an example, say a particular application requires Python 2.7 and SuperPackage 2.4, while another requires Python 3.7 and SuperPackage 3.8. Using both applications could quickly become inconvenient. Conda allows one to create different ‘environments’ on your computer, each with different versions of Python and any other packages (here, SuperPackage), which you can then flexibly activate to use different applications.  Moreover, because Conda maintains prior versions of packages, this helps ensure that software remains usable even when new package releases could otherwise give rise to compatibility issues.
 
-
