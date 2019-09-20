@@ -432,7 +432,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
 
     #Initialize video storage if desired
     if display_dict['save_video']==True:
-        width, height = int(frame_new.shape[1]), int(frame_new.shape[0] * 2)
+        width, height = int(frame_new.shape[1]), int(frame_new.shape[0])
         fourcc = 0
         writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
                          fourcc, 20.0, (width, height), isColor=False)
