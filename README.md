@@ -20,11 +20,9 @@ The iPython scripts included in this repository require the following packages t
 
     a. For OSX/Linux Users, open Terminal on your computer. If using Windows, open Anaconda Prompt.
     
-    b. Copy the following command into Terminal/AnacondaPrompt: ` conda create -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.12.3 scipy=1.2.1` and hit enter.
-    
-    c. When prompted with “Proceed ([y]/n)? Type in `y` and hit enter.
-    
-    d. The ezTrack Conda Environment is now installed.
+    b. Copy the following command into Terminal/AnacondaPrompt: `conda create -y -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.12.3 scipy=1.2.1` and hit enter.
+        
+    c. The ezTrack Conda Environment is now installed.
 
 3. From the ezTrack github page, download all files onto your computer. On the main page of the repository, click the button to ‘Clone or download’, and download the zip folder onto your hard drive (don't forget to unzip the folder). The unzipped folder is called ezTrack-master and contains all files necessary to run ezTrack.  Alternatively, use git commands if you are familiar with them (`git clone https://github.com/DeniseCaiLab/ezTrack.git`)
 
