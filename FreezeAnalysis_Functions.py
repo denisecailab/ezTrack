@@ -7,6 +7,7 @@ Measure_Motion
 cropframe
 Measure_Freezing 
 Play_Video 
+Play_Video_ext
 Save_Data 
 Summarize 
 Batch 
@@ -28,12 +29,15 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
+import PIL.Image
 import warnings
 from scipy import ndimage
 import holoviews as hv
 from holoviews import opts
 from holoviews import streams
 from holoviews.streams import Stream, param
+from io import BytesIO
+from IPython.display import clear_output, Image, display
 hv.notebook_extension('bokeh')
 warnings.filterwarnings("ignore")
 
@@ -360,7 +364,8 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     """ 
     -------------------------------------------------------------------------------------
     
-    Play portion of video back, displaying thresholded video in tandem.
+    Play portion of video back, displaying thresholded video in tandem. Displayed
+    externally
 
     -------------------------------------------------------------------------------------
     Args:
@@ -460,6 +465,142 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
             texttext = 'FREEZING' if Freezing[x]==100 else 'ACTIVE'
             cv2.putText(frame_new,texttext,textposition,textfont,textfontscale,textfontcolor,textlinetype)
             display = np.concatenate((frame_new.astype('uint8'),frame_cut))
+            display_image(display,rate,display_dict['resize'])
+            if display_dict['save_video']==True:
+                writer.write(display) 
+
+        else: 
+            print('No frame detected at frame : ' + str(x) + '.Stopping video play')
+            break
+
+    #Close video window and video writer if open        
+    print('Done playing segment')
+    if display_dict['save_video']==True:
+        writer.release()
+
+def display_image(frame,fwait,resize):
+    img = PIL.Image.fromarray(frame, "L")
+    img = img.resize(size=resize) if resize else img
+    buffer = BytesIO()
+    img.save(buffer,format="JPEG")    
+    display(Image(data=buffer.getvalue()))
+    cv2.waitKey(fwait)
+    clear_output(wait=True)
+        
+        
+    
+    
+    
+########################################################################################
+
+def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Play portion of video back, displaying thresholded video in tandem. Displayed in
+    Jupyter Notebook
+
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        display_dict:: [dict]
+            Dictionary with the following keys:
+                'start' : start point of video segment in frames [int]
+                'end' : end point of video segment in frames [int]
+                'resize' : Default is None, in which original size is retained.
+                           Alternatively, set to tuple as follows: (width,height).
+                           Because this is in pixel units, must be integer values.
+                'save_video' : option to save video if desired [bool]
+                               Currently, will be saved at 20 fps even if video 
+                               is something else
+                               
+        Freezing:: [numpy.array]
+            Array defining whether animal is freezing on frame by frame basis.  
+            0 = Not Freezing; 100 = Freezing
+        
+        mt_cutoff:: [float]
+            Threshold value for determining magnitude of change sufficient to mark
+            pixel as changing from prior frame.
+        
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices. Set to None if no cropping supplied.
+            
+        SIGMA:: [float]
+            Sigma value for gaussian filter applied to each image. Passed to 
+            OpenCV `cv2.GuassianBlur`.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Nothing returned
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
+    
+    #Upoad file
+    cap = cv2.VideoCapture(video_dict['fpath'])
+    rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
+    cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
+
+    #set text parameters
+    textfont = cv2.FONT_HERSHEY_SIMPLEX
+    textposition = (10,30)
+    textfontscale = 1
+    textlinetype = 2
+    textfontcolor = 255
+
+    #Initialize first frame
+    ret, frame_new = cap.read()
+    frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+    frame_new = cropframe(frame_new, crop)
+    frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
+
+    #Initialize video storage if desired
+    if display_dict['save_video']==True:
+        width, height = int(frame_new.shape[1]), int(frame_new.shape[0])
+        fourcc = 0
+        writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
+                         fourcc, 20.0, (width, height), isColor=False)
+
+    #Loop through frames to detect frame by frame differences
+    for x in range (display_dict['start']+1,display_dict['end']):
+
+        # press 'q' to exit
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+        #Attempt to load next frame
+        frame_old = frame_new
+        ret, frame_new = cap.read()
+        if ret == True:
+            
+            #process frame           
+            frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+            frame_new = cropframe(frame_new, crop)
+            frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA) 
+            frame_dif = np.absolute(frame_new - frame_old)
+            frame_cut = (frame_dif > mt_cutoff).astype('uint8')*255
+
+            #Add text to videos, display and save
+            texttext = 'FREEZING' if Freezing[x]==100 else 'ACTIVE'
+            cv2.putText(frame_new,texttext,textposition,textfont,textfontscale,textfontcolor,textlinetype)
+            display = np.concatenate((frame_new.astype('uint8'),frame_cut))
             cv2.imshow("preview",display)
             cv2.waitKey(rate)
             if display_dict['save_video']==True:
@@ -478,7 +619,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
         
         
         
-        
+            
 ########################################################################################    
       
 def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
