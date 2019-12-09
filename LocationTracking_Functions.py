@@ -1242,7 +1242,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
             print('warning. failed to get video frame')
 
     #Close video window and video writer if open
-    clear_output()
+    print('Done playing segment')
     if display_dict['save_video']==True:
         writer.release()
 
