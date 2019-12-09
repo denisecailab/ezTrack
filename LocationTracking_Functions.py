@@ -13,6 +13,7 @@ ROI_Location
 Batch_LoadFiles
 Batch_Process
 PlayVideo
+PlayVideo_ext
 showtrace
 Heatmap
 DistanceTool
@@ -34,6 +35,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
+import PIL.Image
 import warnings
 import functools as fct
 from scipy import ndimage
@@ -41,6 +43,8 @@ import holoviews as hv
 from holoviews import opts
 from holoviews import streams
 from holoviews.streams import Stream, param
+from io import BytesIO
+from IPython.display import clear_output, Image, display
 hv.notebook_extension('bokeh')
 warnings.filterwarnings("ignore")
 
@@ -1151,6 +1155,113 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
 ########################################################################################        
 
 def PlayVideo(video_dict,display_dict,location,crop=None):  
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Play portion of video back, displaying animal's estimated location. Video is played
+    in notebook
+
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                
+        display_dict:: [dict]
+            Dictionary with the following keys:
+                'start' : start point of video segment in frames [int]
+                'end' : end point of video segment in frames [int]
+                'resize' : Default is None, in which original size is retained.
+                           Alternatively, set to tuple as follows: (width,height).
+                           Because this is in pixel units, must be integer values.
+                'save_video' : option to save video if desired [bool]
+                               Currently, will be saved at 20 fps even if video 
+                               is something else
+                               
+        location:: [pandas.dataframe]
+            Pandas dataframe with frame by frame x and y locations,
+            distance travelled, as well as video information and parameter values. 
+            Additionally, for each region of interest, boolean array indicating whether 
+            animal is in the given region for each frame. 
+        
+        crop:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices.       
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        Nothing returned
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
+
+
+    #Load Video and Set Saving Parameters
+    cap = cv2.VideoCapture(video_dict['fpath'])#set file\
+    if display_dict['save_video']==True:
+        ret, frame = cap.read() #read frame
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame = cropframe(frame, crop)
+        height, width = int(frame.shape[0]), int(frame.shape[1])
+        fourcc = 0#cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
+        writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
+                                 fourcc, 20.0, 
+                                 (width, height),
+                                 isColor=False)
+
+    #Initialize video play options   
+    cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
+    rate = int(1000/video_dict['fps']) 
+
+    #Play Video
+    for f in range(display_dict['start'],display_dict['stop']):
+        ret, frame = cap.read() #read frame
+        if ret == True:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frame = cropframe(frame, crop)
+            markposition = (int(location['X'][f]),int(location['Y'][f]))
+            cv2.drawMarker(img=frame,position=markposition,color=255)
+            display_image(frame,rate,display_dict['resize'])
+            #Save video (if desired). 
+            if display_dict['save_video']==True:
+                writer.write(frame) 
+        if ret == False:
+            print('warning. failed to get video frame')
+
+    #Close video window and video writer if open
+    clear_output()
+    if display_dict['save_video']==True:
+        writer.release()
+
+def display_image(frame,fwait,resize):
+    img = PIL.Image.fromarray(frame, "L")
+    img = img.resize(size=resize) if resize else img
+    buffer = BytesIO()
+    img.save(buffer,format="JPEG")    
+    display(Image(data=buffer.getvalue()))
+    cv2.waitKey(fwait)
+    clear_output(wait=True)
+
+    
+    
+
+    
+########################################################################################
+
+def PlayVideo_ext(video_dict,display_dict,location,crop=None):  
     """ 
     -------------------------------------------------------------------------------------
     
