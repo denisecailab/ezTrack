@@ -36,6 +36,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import PIL.Image
+import time
 import warnings
 import functools as fct
 from scipy import ndimage
@@ -1184,6 +1185,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                 'resize' : Default is None, in which original size is retained.
                            Alternatively, set to tuple as follows: (width,height).
                            Because this is in pixel units, must be integer values.
+                'fps' : frames per second of video file/files to be processed [int]
                 'save_video' : option to save video if desired [bool]
                                Currently, will be saved at 20 fps even if video 
                                is something else
@@ -1224,7 +1226,6 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
 
     #Initialize video play options   
     cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
-    rate = int(1000/video_dict['fps']) 
 
     #Play Video
     for f in range(display_dict['start'],display_dict['stop']):
@@ -1234,7 +1235,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
             frame = cropframe(frame, crop)
             markposition = (int(location['X'][f]),int(location['Y'][f]))
             cv2.drawMarker(img=frame,position=markposition,color=255)
-            display_image(frame,rate,display_dict['resize'])
+            display_image(frame,display_dict['fps'],display_dict['resize'])
             #Save video (if desired). 
             if display_dict['save_video']==True:
                 writer.write(frame) 
@@ -1246,13 +1247,13 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     if display_dict['save_video']==True:
         writer.release()
 
-def display_image(frame,fwait,resize):
+def display_image(frame,fps,resize):
     img = PIL.Image.fromarray(frame, "L")
     img = img.resize(size=resize) if resize else img
     buffer = BytesIO()
     img.save(buffer,format="JPEG")    
     display(Image(data=buffer.getvalue()))
-    cv2.waitKey(fwait)
+    time.sleep(1/fps)
     clear_output(wait=True)
 
     
@@ -1287,6 +1288,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
             Dictionary with the following keys:
                 'start' : start point of video segment in frames [int]
                 'end' : end point of video segment in frames [int]
+                'fps' : frames per second of video file/files to be processed [int]
                 'save_video' : option to save video if desired [bool]
                                Currently, will be saved at 20 fps even if video 
                                is something else
@@ -1326,7 +1328,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
 
     #Initialize video play options   
     cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
-    rate = int(1000/video_dict['fps']) 
+    rate = int(1000/display_dict['fps']) 
 
     #Play Video
     for f in range(display_dict['start'],display_dict['stop']):

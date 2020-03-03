@@ -30,6 +30,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import PIL.Image
+import time
 import warnings
 from scipy import ndimage
 import holoviews as hv
@@ -387,6 +388,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
             Dictionary with the following keys:
                 'start' : start point of video segment in frames [int]
                 'end' : end point of video segment in frames [int]
+                'fps' : frames per second of video file/files to be processed [int]
                 'save_video' : option to save video if desired [bool]
                                Currently, will be saved at 20 fps even if video 
                                is something else
@@ -419,7 +421,6 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
-    rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
     cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
 
     #set text parameters
@@ -445,10 +446,6 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     #Loop through frames to detect frame by frame differences
     for x in range (display_dict['start']+1,display_dict['end']):
 
-        # press 'q' to exit
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
         #Attempt to load next frame
         frame_old = frame_new
         ret, frame_new = cap.read()
@@ -465,7 +462,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
             texttext = 'FREEZING' if Freezing[x]==100 else 'ACTIVE'
             cv2.putText(frame_new,texttext,textposition,textfont,textfontscale,textfontcolor,textlinetype)
             display = np.concatenate((frame_new.astype('uint8'),frame_cut))
-            display_image(display,rate,display_dict['resize'])
+            display_image(display,display_dict['fps'],display_dict['resize'])
             if display_dict['save_video']==True:
                 writer.write(display) 
 
@@ -478,13 +475,13 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     if display_dict['save_video']==True:
         writer.release()
 
-def display_image(frame,fwait,resize):
+def display_image(frame,fps,resize):
     img = PIL.Image.fromarray(frame, "L")
     img = img.resize(size=resize) if resize else img
     buffer = BytesIO()
     img.save(buffer,format="JPEG")    
     display(Image(data=buffer.getvalue()))
-    cv2.waitKey(fwait)
+    time.sleep(1/fps)
     clear_output(wait=True)
         
         
@@ -523,6 +520,7 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                 'resize' : Default is None, in which original size is retained.
                            Alternatively, set to tuple as follows: (width,height).
                            Because this is in pixel units, must be integer values.
+                'fps' : frames per second of video file/files to be processed [int]
                 'save_video' : option to save video if desired [bool]
                                Currently, will be saved at 20 fps even if video 
                                is something else
@@ -679,7 +677,6 @@ def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
     #Create Dataframe
     DataFrame = pd.DataFrame(
         {'File': [video_dict['file']]*len(Motion),
-         'FPS': np.ones(len(Motion))*video_dict['fps'],
          'MotionCutoff':np.ones(len(Motion))*mt_cutoff,
          'FreezeThresh':np.ones(len(Motion))*FreezeThresh,
          'MinFreezeDuration':np.ones(len(Motion))*MinDuration,
