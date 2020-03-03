@@ -334,8 +334,9 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
     cap.release() 
     
     reference = np.median(collection,axis=0)
-    if video_dict['mask']['mask'] is not None:
-            reference[video_dict['mask']['mask']] = 0
+    if 'mask' in video_dict.keys():
+        if video_dict['mask']['mask'] is not None:
+                reference[video_dict['mask']['mask']] = 0
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]), 
                       reference)).opts(width=int(reference.shape[1])*stretch['width'],
@@ -435,8 +436,9 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = cropframe(frame,crop)
-        if video_dict['mask']['mask'] is not None:
-            frame[video_dict['mask']['mask']] = 0 
+        if 'mask' in video_dict.keys():
+            if video_dict['mask']['mask'] is not None:
+                    reference[video_dict['mask']['mask']] = 0
         
         #find difference from reference
         if tracking_params['method'] == 'abs':
