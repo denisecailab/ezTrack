@@ -5,14 +5,6 @@ This repository contains iPython files that can be used to track the location, m
 
 # Installation and Package Requirements
 The iPython scripts included in this repository require the following packages to be installed in your Conda environment.  Although the package versions used during development are listed it is likely that latest releases of all will be fine to use:
-* python (3.6.7)
-* jupyter (1.0.0)
-* numpy (1.15.2)
-* pandas (0.23.0)
-* matplotlib (3.1.1) 
-* opencv (3.4.3)
-* holoviews (1.12.3)
-* scipy (1.2.1)
 
 1. [Download and install Miniconda/Conda](https://conda.io/miniconda.html).  Download version with Python 3.7.  The ‘.pkg’ installer is likely easier for those unfamiliar with coding. See below for an explanation of Conda.
 
@@ -20,7 +12,7 @@ The iPython scripts included in this repository require the following packages t
 
     a. For OSX/Linux Users, open Terminal on your computer. If using Windows, open Anaconda Prompt.
     
-    b. Copy the following command into Terminal/AnacondaPrompt: `conda create -y -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.12.3 scipy=1.2.1` and hit enter.
+    b. Copy the following command into Terminal/AnacondaPrompt: `conda create -y -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.12.3 scipy=1.2.1 bokeh=1.2.0` and hit enter.
         
     c. The ezTrack Conda Environment is now installed.
 
