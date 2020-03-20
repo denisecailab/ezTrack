@@ -553,7 +553,7 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
-    rate = int(1000/video_dict['fps']) #duration each frame is present for, in milliseconds
+    rate = int(1000/display_dict['fps']) #duration each frame is present for, in milliseconds
     cap.set(cv2.CAP_PROP_POS_FRAMES,video_dict['start']+display_dict['start']) 
 
     #set text parameters
@@ -773,7 +773,6 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_
     df = pd.DataFrame({
         'File': [video_dict['file']]*len(bins),
         'FileLength': np.ones(len(bins))*len(Motion),
-        'FPS': np.ones(len(bins))*video_dict['fps'],
         'MotionCutoff':np.ones(len(bins))*mt_cutoff,
         'FreezeThresh':np.ones(len(bins))*FreezeThresh,
         'MinFreezeDuration':np.ones(len(bins))*MinDuration
