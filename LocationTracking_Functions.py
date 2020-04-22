@@ -313,12 +313,12 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
             elif ret == False:
                 pass
     cap.release() 
-    
+
     reference = np.median(collection,axis=0)
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]), 
-                      reference)).opts(width=int(reference.shape[1])*stretch['width'],
-                                       height=int(reference.shape[0])*stretch['height'],
+                      reference)).opts(width=int(reference.shape[1]*stretch['width']),
+                                       height=int(reference.shape[0]*stretch['height']),
                                        invert_yaxis=True,
                                        cmap='gray',
                                        colorbar=True,
@@ -1409,8 +1409,8 @@ def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3,
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]),
                       reference)
-                    ).opts(width=int(reference.shape[1])*stretch['width'],
-                           height=int(reference.shape[0])*stretch['height'],
+                    ).opts(width=int(reference.shape[1]*stretch['width']),
+                           height=int(reference.shape[0]*stretch['height']),
                            invert_yaxis=True,cmap='gray',toolbar='below',
                            title="Motion Trace")
     
