@@ -80,6 +80,12 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
                 
         stretch:: [dict]
             Dictionary with the following keys:
@@ -118,6 +124,12 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be 
                               batch processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -146,7 +158,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
     #Set first frame
     cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
     ret, frame = cap.read() 
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)   
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    video_dict['f0'] = frame
     cap.release()
     print('dimensions: {x}'.format(x=frame.shape))
 
@@ -243,6 +256,12 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
         
         stretch:: [dict]
             Dictionary with the following keys:
@@ -315,6 +334,9 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
     cap.release() 
 
     reference = np.median(collection,axis=0)
+    if 'mask' in video_dict.keys():
+        if video_dict['mask']['mask'] is not None:
+                reference[video_dict['mask']['mask']] = 0
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]), 
                       reference)).opts(width=int(reference.shape[1]*stretch['width']),
@@ -332,7 +354,7 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
 
 ########################################################################################
 
-def Locate(cap,reference,tracking_params,crop=None,prior=None):
+def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -414,6 +436,9 @@ def Locate(cap,reference,tracking_params,crop=None,prior=None):
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         frame = cropframe(frame,crop)
+        if 'mask' in video_dict.keys():
+            if video_dict['mask']['mask'] is not None:
+                    reference[video_dict['mask']['mask']] = 0
         
         #find difference from reference
         if tracking_params['method'] == 'abs':
@@ -469,6 +494,12 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
                               
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -528,9 +559,11 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
         if f>0: 
             yprior = np.around(Y[f-1]).astype(int)
             xprior = np.around(X[f-1]).astype(int)
-            ret,dif,com,frame = Locate(cap,reference,tracking_params,crop,prior=[yprior,xprior])
+            ret,dif,com,frame = Locate(cap,reference,tracking_params,
+                                       video_dict,crop,prior=[yprior,xprior])
         else:
-            ret,dif,com,frame = Locate(cap,reference,tracking_params,crop)
+            ret,dif,com,frame = Locate(cap,reference,tracking_params,
+                                       video_dict,crop)
                                                 
         if ret == True:          
             Y[f] = com[0]
@@ -597,6 +630,12 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
                                       
         reference:: [numpy.array]
             Reference image that the current frame is compared to.
@@ -666,7 +705,8 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
         #analyze frame
         frm=np.random.randint(video_dict['start'],cap_max) #select random frame
         cap.set(cv2.CAP_PROP_POS_FRAMES,frm) #sets frame to be next to be grabbed
-        ret,dif,com,frame = Locate(cap,reference,tracking_params,crop=crop) #get frame difference from reference 
+        ret,dif,com,frame = Locate(cap,reference,tracking_params,
+                                   video_dict,crop=crop) #get frame difference from reference 
 
         #plot original frame
         image_orig = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
@@ -888,6 +928,12 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
                               
         bin_dict:: [dict]
             Dictionary specifying bins.  Dictionary keys should be names of the bins.  
@@ -967,6 +1013,12 @@ def Batch_LoadFiles(video_dict):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
 
     
     -------------------------------------------------------------------------------------
@@ -984,6 +1036,12 @@ def Batch_LoadFiles(video_dict):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be 
                               batch processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -1028,6 +1086,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
         
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -1176,6 +1235,12 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -1282,6 +1347,12 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -1615,6 +1686,130 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
         print('Distance between reference points undefined. Cannot scale column: {c}.\
         Returning original dataframe'.format(c=column))
     return df
+
+
+
+########################################################################################    
+    
+def Mask_select(video_dict,stretch,crop=None,fstfile=False):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Creates interactive tool for defining regions of interest, based upon array
+    `region_names`. If `region_names=None`, reference frame is returned but no regions
+    can be drawn.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)                              
+        
+        stretch:: [dict]
+            Dictionary with the following keys:
+                'width' : proportion by which to stretch height for display purposes 
+                          [float]
+                'height' : proportion by which to stretch height for display purposes
+                           [float]
+                           
+        crop:: [hv.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            cropping tool. `crop.data` contains x and y coordinates of crop
+            boundary vertices. Set to None if no cropping supplied.
+
+        fstfile:: [bool]
+            Dictates whether to use first file in video_dict['FileNames'] to generate
+            reference.  True/False
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        image * poly * dmap:: [holoviews.Overlay]
+            First frame of video that can be drawn upon to define regions of interest.
+        
+        poly_stream:: [hv.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            selection tool. `poly_stream.data` contains x and y coordinates of region 
+            vertices.
+            
+        mask:: [boolean numpy array]
+            Boolean numpy array equal to size of frame (after any cropping), with regions
+            to be excluded from analysis set to True.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+        - if `stretch` values are modified, this will only influence dispplay and not
+          calculation
+    
+    """
+    
+    #Load first file if batch processing
+    if fstfile:
+        video_dict['file'] = video_dict['FileNames'][0] 
+        video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), video_dict['file'])
+        if os.path.isfile(video_dict['fpath']):
+            print('file: {file}'.format(file=video_dict['fpath']))
+            cap = cv2.VideoCapture(video_dict['fpath'])
+        else:
+            raise FileNotFoundError('{file} not found. Check that directory and file names are correct'.format(
+                file=video_dict['fpath']))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
+        ret, frame = cap.read() 
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        video_dict['f0'] = frame
+    
+    #Make first image the base image on which to draw
+    f0 = cropframe(video_dict['f0'],crop=crop)
+    image = hv.Image((np.arange(f0.shape[1]), np.arange(f0.shape[0]), f0))
+    image.opts(width=int(f0.shape[1]*stretch['width']),
+               height=int(f0.shape[0]*stretch['height']),
+              invert_yaxis=True,cmap='gray',
+              colorbar=True,
+               toolbar='below',
+              title="Draw Regions to be Exluded")
+
+    #Create polygon element on which to draw and connect via stream to PolyDraw drawing tool
+    poly = hv.Polygons([])
+    poly_stream = streams.PolyDraw(source=poly, drag=True, show_vertices=True)
+    poly.opts(fill_alpha=0.3, active_tools=['poly_draw'])
+    points = hv.Points([]).opts(active_tools=['point_draw'], color='red',size=10)
+    pointDraw_stream = streams.PointDraw(source=points,num_objects=2) 
+    
+    def make_mask(data, mask):
+        try:
+            x_ls, y_ls = data['xs'], data['ys'] 
+        except TypeError:
+            x_ls, y_ls = [], []
+        
+        if len(x_ls)>0:
+            mask['mask'] = np.zeros(f0.shape) 
+            for submask in range(len(x_ls)):
+                x = np.array(poly_stream.data['xs'][submask]) #x coordinates
+                y = np.array(poly_stream.data['ys'][submask]) #y coordinates
+                xy = np.column_stack((x,y)).astype('uint64') #xy coordinate pairs
+                cv2.fillPoly(mask['mask'], pts =[xy], color=1) #fill polygon  
+            mask['mask'] = mask['mask'].astype('bool')
+        return hv.Labels((0,0,""))
+    
+    mask = dict(mask=None)
+    make_mask_ptl = fct.partial(make_mask, mask=mask)        
+    dmap = hv.DynamicMap(make_mask_ptl, streams=[poly_stream])
+    return image*poly*dmap, poly_stream, mask
 
 
 ########################################################################################        
