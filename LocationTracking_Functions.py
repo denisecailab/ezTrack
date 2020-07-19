@@ -230,7 +230,7 @@ def cropframe(frame,crop=None):
 ########################################################################################
 
 def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100,
-              altfile=False,fstfile=False):
+              altfile=False,fstfile=False,frames=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -284,6 +284,9 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
         fstfile:: [bool]
             Dictates whether to use first file in video_dict['FileNames'] to generate
             reference.  True/False
+        
+        frames:: [np array]
+            User defined selection of frames to use for generating reference
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -317,17 +320,21 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
     
     #Collect subset of frames
+    if frames is None:
+        frames = np.random.randint(video_dict['start'],cap_max,num_frames)
+    else:
+        num_frames = len(frames) #make sure num_frames equals length of passed list
+        
     collection = np.zeros((num_frames,h,w))  
-    for x in range (num_frames):          
+    for (idx,framenum) in enumerate(frames):    
         grabbed = False
         while grabbed == False: 
-            y=np.random.randint(video_dict['start'],cap_max)
-            cap.set(cv2.CAP_PROP_POS_FRAMES, y)
+            cap.set(cv2.CAP_PROP_POS_FRAMES, framenum)
             ret, frame = cap.read()
             if ret == True:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 gray = cropframe(gray, crop)
-                collection[x,:,:]=gray
+                collection[idx,:,:]=gray
                 grabbed = True
             elif ret == False:
                 pass
