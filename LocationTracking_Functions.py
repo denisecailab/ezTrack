@@ -159,6 +159,14 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
     cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
     ret, frame = cap.read() 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if (video_dict['dsmpl'] <= 1):
+        frame = cv2.resize(
+                    frame,
+                    (
+                        int(frame.shape[1]*video_dict['dsmpl']),
+                        int(frame.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
     video_dict['f0'] = frame
     cap.release()
     print('dimensions: {x}'.format(x=frame.shape))
@@ -314,6 +322,14 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
     #Get video dimensions with any cropping applied
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if (video_dict['dsmpl'] <= 1):
+        frame = cv2.resize(
+                    frame,
+                    (
+                        int(frame.shape[1]*video_dict['dsmpl']),
+                        int(frame.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
     frame = cropframe(frame, crop)
     h,w = frame.shape[0], frame.shape[1]
     cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
@@ -333,6 +349,14 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
             ret, frame = cap.read()
             if ret == True:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                if (video_dict['dsmpl'] <= 1):
+                    gray = cv2.resize(
+                        gray,
+                        (
+                            int(frame.shape[1]*video_dict['dsmpl']),
+                            int(frame.shape[0]*video_dict['dsmpl'])
+                        ),
+                        cv2.INTER_NEAREST)
                 gray = cropframe(gray, crop)
                 collection[idx,:,:]=gray
                 grabbed = True
@@ -442,6 +466,14 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
     if ret == True:
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if (video_dict['dsmpl'] <= 1):
+            frame = cv2.resize(
+                frame,
+                (
+                    int(frame.shape[1]*video_dict['dsmpl']),
+                    int(frame.shape[0]*video_dict['dsmpl'])
+                ),
+                cv2.INTER_NEAREST)
         frame = cropframe(frame,crop)
         if 'mask' in video_dict.keys():
             if video_dict['mask']['mask'] is not None:
@@ -1287,6 +1319,14 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     if display_dict['save_video']==True:
         ret, frame = cap.read() #read frame
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if (video_dict['dsmpl'] <= 1):
+            frame = cv2.resize(
+                frame,
+                (
+                    int(frame.shape[1]*video_dict['dsmpl']),
+                    int(frame.shape[0]*video_dict['dsmpl'])
+                ),
+                cv2.INTER_NEAREST)
         frame = cropframe(frame, crop)
         height, width = int(frame.shape[0]), int(frame.shape[1])
         fourcc = 0#cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
@@ -1303,6 +1343,14 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
         ret, frame = cap.read() #read frame
         if ret == True:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            if (video_dict['dsmpl'] <= 1):
+                frame = cv2.resize(
+                    frame,
+                    (
+                        int(frame.shape[1]*video_dict['dsmpl']),
+                        int(frame.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
             frame = cropframe(frame, crop)
             markposition = (int(location['X'][f]),int(location['Y'][f]))
             cv2.drawMarker(img=frame,position=markposition,color=255)
@@ -1395,6 +1443,14 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
     if display_dict['save_video']==True:
         ret, frame = cap.read() #read frame
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if (video_dict['dsmpl'] <= 1):
+            frame = cv2.resize(
+                frame,
+                (
+                    int(frame.shape[1]*video_dict['dsmpl']),
+                    int(frame.shape[0]*video_dict['dsmpl'])
+                ),
+                cv2.INTER_NEAREST)
         frame = cropframe(frame, crop)
         height, width = int(frame.shape[0]), int(frame.shape[1])
         fourcc = 0#cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
@@ -1412,6 +1468,14 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
         ret, frame = cap.read() #read frame
         if ret == True:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            if (video_dict['dsmpl'] <= 1):
+                frame = cv2.resize(
+                    frame,
+                    (
+                        int(frame.shape[1]*video_dict['dsmpl']),
+                        int(frame.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
             frame = cropframe(frame, crop)
             markposition = (int(location['X'][f]),int(location['Y'][f]))
             cv2.drawMarker(img=frame,position=markposition,color=255)
@@ -1778,6 +1842,14 @@ def Mask_select(video_dict,stretch,crop=None,fstfile=False):
         cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
         ret, frame = cap.read() 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if (video_dict['dsmpl'] <= 1):
+            frame = cv2.resize(
+                frame,
+                (
+                    int(frame.shape[1]*video_dict['dsmpl']),
+                    int(frame.shape[0]*video_dict['dsmpl'])
+                ),
+                cv2.INTER_NEAREST)
         video_dict['f0'] = frame
     
     #Make first image the base image on which to draw
