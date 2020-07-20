@@ -356,8 +356,8 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
                     gray = cv2.resize(
                         gray,
                         (
-                            int(frame.shape[1]*video_dict['dsmpl']),
-                            int(frame.shape[0]*video_dict['dsmpl'])
+                            int(gray.shape[1]*video_dict['dsmpl']),
+                            int(gray.shape[0]*video_dict['dsmpl'])
                         ),
                         cv2.INTER_NEAREST)
                 gray = cropframe(gray, crop)
