@@ -649,13 +649,13 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
             #process frame           
             frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
             if (video_dict['dsmpl'] < 1):
-            frame_new = cv2.resize(
-                frame_new,
-                (
-                    int(frame_new.shape[1]*video_dict['dsmpl']),
-                    int(frame_new.shape[0]*video_dict['dsmpl'])
-                ),
-                cv2.INTER_NEAREST)
+                frame_new = cv2.resize(
+                    frame_new,
+                    (
+                        int(frame_new.shape[1]*video_dict['dsmpl']),
+                        int(frame_new.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
             frame_new = cropframe(frame_new, crop)
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA) 
             frame_dif = np.absolute(frame_new - frame_old)
