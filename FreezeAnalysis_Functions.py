@@ -68,6 +68,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -106,6 +108,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing whole 
                         video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -143,6 +147,14 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
         cap.set(cv2.CAP_PROP_POS_FRAMES,0)
     ret, frame = cap.read() 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if (video_dict['dsmpl'] < 1):
+        frame = cv2.resize(
+                    frame,
+                    (
+                        int(frame.shape[1]*video_dict['dsmpl']),
+                        int(frame.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
     cap.release() 
 
     #Make first image reference frame on which cropping can be performed
@@ -188,6 +200,8 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -229,6 +243,14 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
     #Initialize first frame and array to store motion values in
     ret, frame_new = cap.read()
     frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+    if (video_dict['dsmpl'] < 1):
+        frame_new = cv2.resize(
+                    frame_new,
+                    (
+                        int(frame_new.shape[1]*video_dict['dsmpl']),
+                        int(frame_new.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
     frame_new = cropframe(frame_new, crop)
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)  
     Motion = np.zeros(cap_max - video_dict['start'])
@@ -240,6 +262,14 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
         if ret == True:
             #Reset new frame and process calculate difference between old/new frames
             frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+            if (video_dict['dsmpl'] < 1):
+                frame_new = cv2.resize(
+                    frame_new,
+                    (
+                        int(frame_new.shape[1]*video_dict['dsmpl']),
+                        int(frame_new.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
             frame_new = cropframe(frame_new, crop)
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)  
             frame_dif = np.absolute(frame_new - frame_old)
@@ -378,6 +408,8 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -433,6 +465,14 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     #Initialize first frame
     ret, frame_new = cap.read()
     frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+    if (video_dict['dsmpl'] < 1):
+        frame_new = cv2.resize(
+            frame_new,
+            (
+                int(frame_new.shape[1]*video_dict['dsmpl']),
+                int(frame_new.shape[0]*video_dict['dsmpl'])
+            ),
+            cv2.INTER_NEAREST)
     frame_new = cropframe(frame_new, crop)
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
@@ -453,6 +493,14 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
             
             #process frame           
             frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+            if (video_dict['dsmpl'] < 1):
+                frame_new = cv2.resize(
+                    frame_new,
+                    (
+                        int(frame_new.shape[1]*video_dict['dsmpl']),
+                        int(frame_new.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
             frame_new = cropframe(frame_new, crop)
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA) 
             frame_dif = np.absolute(frame_new - frame_old)
@@ -507,6 +555,8 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -566,6 +616,14 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
     #Initialize first frame
     ret, frame_new = cap.read()
     frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+    if (video_dict['dsmpl'] < 1):
+        frame_new = cv2.resize(
+            frame_new,
+            (
+                int(frame_new.shape[1]*video_dict['dsmpl']),
+                int(frame_new.shape[0]*video_dict['dsmpl'])
+            ),
+            cv2.INTER_NEAREST)
     frame_new = cropframe(frame_new, crop)
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
@@ -590,6 +648,14 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
             
             #process frame           
             frame_new = cv2.cvtColor(frame_new, cv2.COLOR_BGR2GRAY)
+            if (video_dict['dsmpl'] < 1):
+            frame_new = cv2.resize(
+                frame_new,
+                (
+                    int(frame_new.shape[1]*video_dict['dsmpl']),
+                    int(frame_new.shape[0]*video_dict['dsmpl'])
+                ),
+                cv2.INTER_NEAREST)
             frame_new = cropframe(frame_new, crop)
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA) 
             frame_dif = np.absolute(frame_new - frame_old)
@@ -636,6 +702,8 @@ def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -711,6 +779,8 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -804,6 +874,8 @@ def Batch_LoadFiles(video_dict):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -864,6 +936,8 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -959,6 +1033,8 @@ def Calibrate(video_dict,cal_pix,SIGMA):
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
                 'fps' : frames per second of video files to be processed [int]
                 'cal_sec' : number of seconds to calibrate based upon [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
         
         cal_pix:: [int]
             Number of pixels in frame to base calibration upon. Random selection of 
@@ -997,6 +1073,14 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     #Initialize first frame
     ret, frame = cap.read()
     frame_new = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    if (video_dict['dsmpl'] < 1):
+        frame_new = cv2.resize(
+            frame_new,
+            (
+                int(frame_new.shape[1]*video_dict['dsmpl']),
+                int(frame_new.shape[0]*video_dict['dsmpl'])
+            ),
+            cv2.INTER_NEAREST)
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
     #Get random set of pixels to examine across frames
@@ -1018,6 +1102,14 @@ def Calibrate(video_dict,cal_pix,SIGMA):
         if ret == True:
             #Process frame
             frame_new = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            if (video_dict['dsmpl'] < 1):
+                frame_new = cv2.resize(
+                    frame_new,
+                    (
+                        int(frame_new.shape[1]*video_dict['dsmpl']),
+                        int(frame_new.shape[0]*video_dict['dsmpl'])
+                    ),
+                    cv2.INTER_NEAREST)
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
             #Get differences for select pixels
