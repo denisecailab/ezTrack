@@ -75,6 +75,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -115,15 +117,17 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video file/files to be processed [int]
+                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
-                'end' : frame at which to end.  set to None if processing whole 
-                        video [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
-                              List of filenames of videos in folder to be 
-                              batch processed.  [list]
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
                 'f0' : first frame of video [numpy array]
                 'mask' : [dict]
                     Dictionary with the following keys:
@@ -252,13 +256,12 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'altfile' : (only specify if used)
-                            filename of alternative video to be used to generate
-                            reference [str]
                 'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -528,6 +531,8 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -664,6 +669,8 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -962,6 +969,8 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1047,6 +1056,8 @@ def Batch_LoadFiles(video_dict):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1065,16 +1076,18 @@ def Batch_LoadFiles(video_dict):
         video_dict:: [dict]
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
-                'file' : filename [str]
-                'fps' : frames per second of video file/files to be processed [int]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
-                'end' : frame at which to end.  set to None if processing whole 
-                        video [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
-                              List of filenames of videos in folder to be 
-                              batch processed.  [list]
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
                 'f0' : first frame of video [numpy array]
                 'mask' : [dict]
                     Dictionary with the following keys:
@@ -1120,12 +1133,19 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
                 'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)
         
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -1269,6 +1289,8 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1397,6 +1419,8 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1780,6 +1804,8 @@ def Mask_select(video_dict,stretch,crop=None,fstfile=False):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1790,7 +1816,7 @@ def Mask_select(video_dict,stretch,crop=None,fstfile=False):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)                              
+                                 None. [bool numpy array)                             
         
         stretch:: [dict]
             Dictionary with the following keys:
