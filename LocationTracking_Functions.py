@@ -163,7 +163,7 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
     cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
     ret, frame = cap.read() 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    if (video_dict['dsmpl'] <= 1):
+    if (video_dict['dsmpl'] < 1):
         frame = cv2.resize(
                     frame,
                     (
@@ -325,7 +325,7 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
     #Get video dimensions with any cropping applied
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    if (video_dict['dsmpl'] <= 1):
+    if (video_dict['dsmpl'] < 1):
         frame = cv2.resize(
                     frame,
                     (
@@ -352,7 +352,7 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
             ret, frame = cap.read()
             if ret == True:
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                if (video_dict['dsmpl'] <= 1):
+                if (video_dict['dsmpl'] < 1):
                     gray = cv2.resize(
                         gray,
                         (
@@ -469,7 +469,7 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
     if ret == True:
         
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if (video_dict['dsmpl'] <= 1):
+        if (video_dict['dsmpl'] < 1):
             frame = cv2.resize(
                 frame,
                 (
@@ -1341,7 +1341,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
     if display_dict['save_video']==True:
         ret, frame = cap.read() #read frame
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if (video_dict['dsmpl'] <= 1):
+        if (video_dict['dsmpl'] < 1):
             frame = cv2.resize(
                 frame,
                 (
@@ -1365,7 +1365,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
         ret, frame = cap.read() #read frame
         if ret == True:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            if (video_dict['dsmpl'] <= 1):
+            if (video_dict['dsmpl'] < 1):
                 frame = cv2.resize(
                     frame,
                     (
@@ -1467,7 +1467,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
     if display_dict['save_video']==True:
         ret, frame = cap.read() #read frame
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if (video_dict['dsmpl'] <= 1):
+        if (video_dict['dsmpl'] < 1):
             frame = cv2.resize(
                 frame,
                 (
@@ -1492,7 +1492,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
         ret, frame = cap.read() #read frame
         if ret == True:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            if (video_dict['dsmpl'] <= 1):
+            if (video_dict['dsmpl'] < 1):
                 frame = cv2.resize(
                     frame,
                     (
@@ -1868,7 +1868,7 @@ def Mask_select(video_dict,stretch,crop=None,fstfile=False):
         cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
         ret, frame = cap.read() 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if (video_dict['dsmpl'] <= 1):
+        if (video_dict['dsmpl'] < 1):
             frame = cv2.resize(
                 frame,
                 (
