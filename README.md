@@ -1,7 +1,7 @@
 # Behavior Tracking with ezTrack
 This repository contains iPython files that can be used to track the location, motion, and freezing of an animal. For the sake of clarity, these processes are described as two modules: one for the analysis of freezing; the other for tracking an animal's location.  **If you are unfamiliar with how to use iPython/Jupyter Notebook, please see [Getting Started](https://github.com/DeniseCaiLab/GettingStarted)**.
 
-**Please see our biorxiv preprint (https://www.biorxiv.org/content/10.1101/592592v2)** for ezTrack video tutorials (Supplementary Videos 1 and 2) and for validation of tracking.
+**Please see the publication of ezTrack (https://www.nature.com/articles/s41598-019-56408-9)** for ezTrack video tutorials (Supplementary Videos 1 and 2) and for validation of tracking.
 
 # New Feature Alerts:
 - 07/20/2020: ezTrack now supports spatial downsampling of videos!  You can reduce the resolution of the video to greatly speed processing. Processing high-definition videos on older laptops/desktops can be slow, but by downsampling, processing speeds are much faster.
