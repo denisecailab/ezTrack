@@ -3,6 +3,9 @@ This repository contains iPython files that can be used to track the location, m
 
 **Please see the publication of ezTrack (https://www.nature.com/articles/s41598-019-56408-9)** for ezTrack video tutorials (Supplementary Videos 1 and 2) and for validation of tracking.
 
+# Please cite ezTrack if you use it in your research:
+Pennington ZT, Dong Z, Feng Y, Vetere LM, Page-Harley L, Shuman T, Cai DJ (2019). ezTrack: An open-source video analysis pipeline for the investigation of animal behavior. Scientific Reports: 9(1): 19979
+
 # New Feature Alerts:
 - 07/20/2020: ezTrack now supports spatial downsampling of videos!  You can reduce the resolution of the video to greatly speed processing. Processing high-definition videos on older laptops/desktops can be slow, but by downsampling, processing speeds are much faster.
 - 07/19/2020: Location tracking module now allows user to manually define frame numbers to be used when selecting reference.  This is useful if baseline portion of video without animal will be used for reference, and resolves issue when alternative video being used for reference is a different length than the video being processed.
