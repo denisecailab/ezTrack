@@ -368,9 +368,6 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
     cap.release() 
 
     reference = np.median(collection,axis=0)
-    if 'mask' in video_dict.keys():
-        if video_dict['mask']['mask'] is not None:
-                reference[video_dict['mask']['mask']] = 0
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]), 
                       reference)).opts(width=int(reference.shape[1]*stretch['width']),
@@ -478,9 +475,6 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
                 ),
                 cv2.INTER_NEAREST)
         frame = cropframe(frame,crop)
-        if 'mask' in video_dict.keys():
-            if video_dict['mask']['mask'] is not None:
-                    reference[video_dict['mask']['mask']] = 0
         
         #find difference from reference
         if tracking_params['method'] == 'abs':
@@ -490,6 +484,9 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
         elif tracking_params['method'] == 'dark':
             dif = reference-frame
         dif = dif.astype('int16')
+        if 'mask' in video_dict.keys():
+            if video_dict['mask']['mask'] is not None:
+                    dif[video_dict['mask']['mask']] = 0
               
         #apply window
         weight = 1 - tracking_params['window_weight']
