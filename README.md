@@ -20,7 +20,7 @@ The iPython scripts included in this repository require the following packages t
 
     a. For OSX/Linux Users, open Terminal on your computer. If using Windows, open Anaconda Prompt.
     
-    b. Copy the following command into Terminal/AnacondaPrompt: `conda create -y -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.12.3 scipy=1.2.1 bokeh=1.2.0` and hit enter.
+    b. Copy the following command into Terminal/AnacondaPrompt: `conda create -y -n ezTrack -c conda-forge python=3.6 pandas=0.23.0 matplotlib=3.1.1 opencv=3.4.3 jupyter=1.0.0 holoviews=1.13.5 scipy=1.2.1 bokeh=2.1.1` and hit enter.
         
     c. The ezTrack Conda Environment is now installed.
 
