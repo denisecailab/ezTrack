@@ -625,7 +625,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
             
     #release video
     cap.release()
-    print('total frames processed: {f}'.format(f=len(D)))
+    print('total frames processed: {f}\n'.format(f=len(D)))
     
     #create pandas dataframe
     df = pd.DataFrame(

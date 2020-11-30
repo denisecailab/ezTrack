@@ -287,6 +287,7 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
             break
         
     cap.release() #release video
+    print('total frames processed: {f}\n'.format(f=len(Motion)))
     return(Motion) #return motion values
 
 
