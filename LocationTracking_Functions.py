@@ -40,6 +40,7 @@ import time
 import warnings
 import functools as fct
 from scipy import ndimage
+from tqdm import tqdm
 import holoviews as hv
 from holoviews import opts
 from holoviews import streams
@@ -595,7 +596,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
     D = np.zeros(cap_max - video_dict['start'])
 
     #Loop through frames to detect frame by frame differences
-    for f in range(len(D)):
+    for f in tqdm(range(len(D))):
         
         if f>0: 
             yprior = np.around(Y[f-1]).astype(int)

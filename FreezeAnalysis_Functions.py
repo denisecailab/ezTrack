@@ -33,6 +33,7 @@ import PIL.Image
 import time
 import warnings
 from scipy import ndimage
+from tqdm import tqdm
 import holoviews as hv
 from holoviews import opts
 from holoviews import streams
@@ -256,7 +257,7 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
     Motion = np.zeros(cap_max - video_dict['start'])
 
     #Loop through frames to detect frame by frame differences
-    for x in range (1,len(Motion)):
+    for x in tqdm(range(1,len(Motion))):
         frame_old = frame_new
         ret, frame_new = cap.read()
         if ret == True:
