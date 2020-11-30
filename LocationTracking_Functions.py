@@ -156,9 +156,13 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
         raise FileNotFoundError('{file} not found. Check that directory and file names are correct'.format(
             file=video_dict['fpath']))
 
-    #Get maxiumum frame of file. Note that max frame is updated later if fewer frames detected
+    #Print video information. Note that max frame is updated later if fewer frames detected
     cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     print('total frames: {frames}'.format(frames=cap_max))
+    print('nominal fps: {fps}'.format(fps=int(cap.get(cv2.CAP_PROP_FPS))))
+    print('dimensions (h x w): {h},{w}'.format(
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
 
     #Set first frame
     cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
@@ -174,7 +178,6 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                     cv2.INTER_NEAREST)
     video_dict['f0'] = frame
     cap.release()
-    print('dimensions: {x}'.format(x=frame.shape))
 
     #Make first image reference frame on which cropping can be performed
     image = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
@@ -1235,6 +1238,15 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
         print ('Processing File: {f}'.format(f=file))  
         video_dict['file'] = file 
         video_dict['fpath'] = os.path.join(os.path.normpath(video_dict['dpath']), file)
+        
+        #Print video information. Note that max frame is updated later if fewer frames detected
+        cap = cv2.VideoCapture(video_dict['fpath'])
+        cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
+        print('total frames: {frames}'.format(frames=cap_max))
+        print('nominal fps: {fps}'.format(fps=int(cap.get(cv2.CAP_PROP_FPS))))
+        print('dimensions (h x w): {h},{w}'.format(
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
         
         reference,image = Reference(video_dict,crop=crop,num_frames=100) 
         location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
