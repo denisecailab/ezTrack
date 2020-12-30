@@ -759,7 +759,7 @@ def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
          'Freezing': Freezing
         })   
 
-    DataFrame.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_FreezingOutput.csv')
+    DataFrame.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_FreezingOutput.csv', index=False)
     
     
     
@@ -1023,7 +1023,7 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA
 
     #Write summary data to csv file
     sum_pathout = os.path.join(os.path.normpath(video_dict['dpath']), 'BatchSummary.csv')
-    summary_all.to_csv(sum_pathout)
+    summary_all.to_csv(sum_pathout, index=False)
     return summary_all
 
 

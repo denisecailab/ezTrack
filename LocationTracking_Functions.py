@@ -1255,7 +1255,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
             location = ROI_Location(reference,location,region_names,poly_stream)
         if scale_dict!=None:
             location = ScaleDistance(scale_dict, dist, df=location, column='Distance_px')
-        location.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv')
+        location.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv', index=False)
         file_summary = Summarize_Location(location, video_dict, bin_dict=bin_dict, region_names=region_names)
                
         try: 
@@ -1271,7 +1271,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
 
     #Write summary data to csv file
     sum_pathout = os.path.join(os.path.normpath(video_dict['dpath']), 'BatchSummary.csv')
-    summary_all.to_csv(sum_pathout)
+    summary_all.to_csv(sum_pathout, index=False)
     
     layout = hv.Layout(images)
     return summary_all, layout
