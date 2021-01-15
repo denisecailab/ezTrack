@@ -428,6 +428,8 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
                            background of the frame doesn't matter. 'light' specifies that
                            the animal is lighter than the background. 'dark' specifies that 
                            the animal is darker than the background. 
+                'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
+                'wire_krn' : size of kernel used for morphological opening to remove wire. [int]
         
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
@@ -503,6 +505,11 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
             
         #threshold differences and find center of mass for remaining values
         dif[dif<np.percentile(dif,tracking_params['loc_thresh'])]=0
+        #remove influence of wire
+        if tracking_params['rmv_wire'] == True:
+            ksize = tracking_params['wire_krn']
+            kernel = np.ones((ksize,ksize),np.uint8)
+            dif = cv2.morphologyEx(dif, cv2.MORPH_OPEN, kernel)
         com=ndimage.measurements.center_of_mass(dif)
         return ret, dif, com, frame
     
@@ -566,6 +573,13 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
                 'window_weight' : 0-1 scale for window, if used, where 1 is maximal 
                                   weight of window surrounding prior locaiton. 
                                   [float between 0-1]
+                'method' : 'abs', 'light', or 'dark'.  If 'abs', absolute difference
+                           between reference and current frame is taken, and thus the 
+                           background of the frame doesn't matter. 'light' specifies that
+                           the animal is lighter than the background. 'dark' specifies that 
+                           the animal is darker than the background. 
+                'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
+                'wire_krn' : size of kernel used for morphological opening to remove wire. [int]
          
         reference:: [numpy.array]
             Reference image that the current frame is compared to.
@@ -712,6 +726,8 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
                            background of the frame doesn't matter. 'light' specifies that
                            the animal is lighter than the background. 'dark' specifies that 
                            the animal is darker than the background. 
+                'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
+                'wire_krn' : size of kernel used for morphological opening to remove wire. [int] 
                            
         examples:: [uint]
             The number of frames for location tracking to be tested on.
@@ -1173,6 +1189,8 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
                            background of the frame doesn't matter. 'light' specifies that
                            the animal is lighter than the background. 'dark' specifies that 
                            the animal is darker than the background. 
+                'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
+                'wire_krn' : size of kernel used for morphological opening to remove wire. [int]
         
         bin_dict:: [dict]
             Dictionary specifying bins.  Dictionary keys should be names of the bins.  
