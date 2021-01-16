@@ -208,7 +208,7 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
 
 ########################################################################################
 
-def cropframe(frame,crop=None):
+def cropframe(frame, crop=None):
     """ 
     -------------------------------------------------------------------------------------
     
