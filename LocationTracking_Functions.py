@@ -60,7 +60,7 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
-    Loads video and creates interactive cropping tool from first frame. In the 
+    Loads video and creates interactive cropping tool (video_dict['crop'] from first frame. In the 
     case of batch processing, the first frame of the first video is used. Additionally, 
     when batch processing, the same cropping parameters will be appplied to every video.  
     Care should therefore be taken that the region of interest is in the same position across 
@@ -77,20 +77,25 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)  
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
                 
         cropmethod:: [str]
             Method of cropping video.  cropmethod takes the following values:
@@ -106,11 +111,6 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
         image:: [holoviews.Image]
             Holoviews hv.Image displaying first frame
             
-        stream:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `stream.data` contains x and y coordinates of crop
-            boundary vertices.
-            
         video_dict:: [dict]
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
@@ -121,17 +121,22 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'crop' : [holoviews.streams.stream]
+                        Holoviews stream object enabling dynamic selection in response to 
+                        cropping tool. `stream.data` contains x and y coordinates of crop
+                        boundary vertices.
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
+                'f0' : first frame of video [numpy array]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array)
+                
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -188,13 +193,14 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     #Create polygon element on which to draw and connect via stream to poly drawing tool
     if cropmethod==None:
         image.opts(title="First Frame")
-        return image,None,video_dict
+        video_dict['crop'] = None
+        return image, video_dict
     
     if cropmethod=='Box':         
         box = hv.Polygons([])
         box.opts(alpha=.5)
-        box_stream = streams.BoxEdit(source=box,num_objects=1)     
-        return (image*box),box_stream,video_dict
+        video_dict['crop'] = streams.BoxEdit(source=box,num_objects=1)     
+        return (image*box), video_dict
     
     
     
@@ -242,7 +248,7 @@ def cropframe(frame,crop=None):
 
 ########################################################################################
 
-def Reference(video_dict, crop=None,num_frames=100,
+def Reference(video_dict,num_frames=100,
               altfile=False,fstfile=False,frames=None):
     """ 
     -------------------------------------------------------------------------------------
@@ -277,11 +283,6 @@ def Reference(video_dict, crop=None,num_frames=100,
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.
         
         num_frames:: [uint]
             Number of frames to base reference frame on.
@@ -332,7 +333,10 @@ def Reference(video_dict, crop=None,num_frames=100,
                         int(frame.shape[0]*video_dict['dsmpl'])
                     ),
                     cv2.INTER_NEAREST)
-    frame = cropframe(frame, crop)
+    frame = cropframe(
+        frame, 
+        video_dict['crop'] if 'crop' in video_dict.keys() else None
+    )
     h,w = frame.shape[0], frame.shape[1]
     cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     cap_max = int(video_dict['end']) if video_dict['end'] is not None else cap_max
@@ -359,7 +363,10 @@ def Reference(video_dict, crop=None,num_frames=100,
                             int(gray.shape[0]*video_dict['dsmpl'])
                         ),
                         cv2.INTER_NEAREST)
-                gray = cropframe(gray, crop)
+                gray = cropframe(
+                    gray, 
+                    video_dict['crop'] if 'crop' in video_dict.keys() else None
+                )
                 collection[idx,:,:]=gray
                 grabbed = True
             elif ret == False:
@@ -384,7 +391,7 @@ def Reference(video_dict, crop=None,num_frames=100,
 
 ########################################################################################
 
-def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
+def Locate(cap,reference,tracking_params,video_dict,prior=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -450,11 +457,6 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                                 
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.
         
         prior:: [list]
             If window is being used, list of length 2 is passed, where first index is 
@@ -500,7 +502,10 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
                     int(frame.shape[0]*video_dict['dsmpl'])
                 ),
                 cv2.INTER_NEAREST)
-        frame = cropframe(frame,crop)
+        frame = cropframe(
+            frame, 
+            video_dict['crop'] if 'crop' in video_dict.keys() else None
+        )
         
         #find difference from reference
         if tracking_params['method'] == 'abs':
@@ -542,7 +547,7 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
     
 ########################################################################################        
 
-def TrackLocation(video_dict,tracking_params,reference,poly_stream,crop=None):
+def TrackLocation(video_dict,tracking_params,reference,poly_stream):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -610,13 +615,7 @@ def TrackLocation(video_dict,tracking_params,reference,poly_stream,crop=None):
         poly_stream:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
             selection tool. `poly_stream.data` contains x and y coordinates of roi 
-            vertices.
-        
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.
-        
+            vertices.      
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -647,10 +646,10 @@ def TrackLocation(video_dict,tracking_params,reference,poly_stream,crop=None):
             yprior = np.around(Y[f-1]).astype(int)
             xprior = np.around(X[f-1]).astype(int)
             ret,dif,com,frame = Locate(cap,reference,tracking_params,
-                                       video_dict,crop,prior=[yprior,xprior])
+                                       video_dict,prior=[yprior,xprior])
         else:
             ret,dif,com,frame = Locate(cap,reference,tracking_params,
-                                       video_dict,crop)
+                                       video_dict)
                                                 
         if ret == True:          
             Y[f] = com[0]
@@ -694,7 +693,7 @@ def TrackLocation(video_dict,tracking_params,reference,poly_stream,crop=None):
 
 ########################################################################################
 
-def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=None):
+def LocationThresh_View(video_dict,reference,tracking_params,examples=4):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -763,11 +762,6 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
                            
         examples:: [uint]
             The number of frames for location tracking to be tested on.
-            
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.
         
     
     -------------------------------------------------------------------------------------
@@ -795,8 +789,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
         #analyze frame
         frm=np.random.randint(video_dict['start'],cap_max) #select random frame
         cap.set(cv2.CAP_PROP_POS_FRAMES,frm) #sets frame to be next to be grabbed
-        ret,dif,com,frame = Locate(cap,reference,tracking_params,
-                                   video_dict,crop=crop) #get frame difference from reference 
+        ret,dif,com,frame = Locate(cap,reference,tracking_params, video_dict) 
 
         #plot original frame
         image_orig = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
@@ -1329,8 +1322,8 @@ def Batch_Process(video_dict,tracking_params,bin_dict,
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
         
-        reference,image = Reference(video_dict,crop=crop,num_frames=50) 
-        location = TrackLocation(video_dict,tracking_params,reference,poly_stream,crop=crop)
+        reference,image = Reference(video_dict,num_frames=50) 
+        location = TrackLocation(video_dict,tracking_params,reference,poly_stream)
         
         if scale_dict!=None:
             location = ScaleDistance(scale_dict, dist, df=location, column='Distance_px')
@@ -1361,7 +1354,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,
 
 ########################################################################################        
 
-def PlayVideo(video_dict,display_dict,location,crop=None):  
+def PlayVideo(video_dict,display_dict,location):  
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1412,11 +1405,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
             distance travelled, as well as video information and parameter values. 
             Additionally, for each region of interest, boolean array indicating whether 
             animal is in the given region for each frame. 
-        
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.       
+            
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1441,7 +1430,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                     int(frame.shape[0]*video_dict['dsmpl'])
                 ),
                 cv2.INTER_NEAREST)
-        frame = cropframe(frame, crop)
+        frame = cropframe(frame, video_dict['crop'])
         height, width = int(frame.shape[0]), int(frame.shape[1])
         fourcc = 0#cv2.VideoWriter_fourcc(*'jpeg') #only writes up to 20 fps, though video read can be 30.
         writer = cv2.VideoWriter(os.path.join(os.path.normpath(video_dict['dpath']), 'video_output.avi'), 
@@ -1465,7 +1454,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                         int(frame.shape[0]*video_dict['dsmpl'])
                     ),
                     cv2.INTER_NEAREST)
-            frame = cropframe(frame, crop)
+            frame = cropframe(frame, video_dict['crop'])
             markposition = (int(location['X'][f]),int(location['Y'][f]))
             cv2.drawMarker(img=frame,position=markposition,color=255)
             display_image(frame,display_dict['fps'],display_dict['resize'])
@@ -1945,7 +1934,7 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
 
 ########################################################################################    
     
-def Mask_select(video_dict,crop=None,fstfile=False):
+def Mask_select(video_dict, fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1978,12 +1967,10 @@ def Mask_select(video_dict,crop=None,fstfile=False):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)                             
-                           
-        crop:: [hv.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices. Set to None if no cropping supplied.
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
 
         fstfile:: [bool]
             Dictates whether to use first file in video_dict['FileNames'] to generate
@@ -1993,15 +1980,15 @@ def Mask_select(video_dict,crop=None,fstfile=False):
     Returns:
         image * poly * dmap:: [holoviews.Overlay]
             First frame of video that can be drawn upon to define regions of interest.
-        
-        poly_stream:: [hv.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            selection tool. `poly_stream.data` contains x and y coordinates of region 
-            vertices.
             
-        mask:: [boolean numpy array]
-            Boolean numpy array equal to size of frame (after any cropping), with regions
-            to be excluded from analysis set to True.
+        mask:: [dict]
+            Dictionary with the following keys:
+                'mask' : boolean numpy array identifying regions to exlude
+                         from analysis.  If no such regions, equal to
+                         None. [bool numpy array)   
+                'mask_stream' : Holoviews stream object enabling dynamic selection 
+                        in response to selection tool. `mask_stream.data` contains 
+                        x and y coordinates of region vertices. [holoviews polystream]
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -2034,7 +2021,10 @@ def Mask_select(video_dict,crop=None,fstfile=False):
         video_dict['f0'] = frame
     
     #Make first image the base image on which to draw
-    f0 = cropframe(video_dict['f0'],crop=crop)
+    f0 = cropframe(
+        video_dict['f0'],
+        video_dict['crop'] if 'crop' in video_dict.keys() else None
+    )
     image = hv.Image((np.arange(f0.shape[1]), np.arange(f0.shape[0]), f0))
     image.opts(width=int(f0.shape[1]*video_dict['stretch']['width']),
                height=int(f0.shape[0]*video_dict['stretch']['height']),
@@ -2044,8 +2034,10 @@ def Mask_select(video_dict,crop=None,fstfile=False):
               title="Draw Regions to be Exluded")
 
     #Create polygon element on which to draw and connect via stream to PolyDraw drawing tool
+    mask = dict(mask=None)
     poly = hv.Polygons([])
-    poly_stream = streams.PolyDraw(source=poly, drag=True, show_vertices=True)
+    mask['stream'] = streams.PolyDraw(source=poly, drag=True, show_vertices=True)
+    #poly_stream = streams.PolyDraw(source=poly, drag=True, show_vertices=True)
     poly.opts(fill_alpha=0.3, active_tools=['poly_draw'])
     points = hv.Points([]).opts(active_tools=['point_draw'], color='red',size=10)
     pointDraw_stream = streams.PointDraw(source=points,num_objects=2) 
@@ -2059,17 +2051,17 @@ def Mask_select(video_dict,crop=None,fstfile=False):
         if len(x_ls)>0:
             mask['mask'] = np.zeros(f0.shape) 
             for submask in range(len(x_ls)):
-                x = np.array(poly_stream.data['xs'][submask]) #x coordinates
-                y = np.array(poly_stream.data['ys'][submask]) #y coordinates
+                x = np.array(mask['stream'].data['xs'][submask]) #x coordinates
+                y = np.array(mask['stream'].data['ys'][submask]) #y coordinates
                 xy = np.column_stack((x,y)).astype('uint64') #xy coordinate pairs
                 cv2.fillPoly(mask['mask'], pts =[xy], color=1) #fill polygon  
             mask['mask'] = mask['mask'].astype('bool')
         return hv.Labels((0,0,""))
     
-    mask = dict(mask=None)
+    
     make_mask_ptl = fct.partial(make_mask, mask=mask)        
-    dmap = hv.DynamicMap(make_mask_ptl, streams=[poly_stream])
-    return image*poly*dmap, poly_stream, mask
+    dmap = hv.DynamicMap(make_mask_ptl, streams=[mask['stream']])
+    return image*poly*dmap, mask
 
 
 ########################################################################################        
