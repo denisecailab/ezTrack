@@ -75,6 +75,7 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
                 'stretch' : Dictionary used to alter display of frames, with the following keys:
@@ -119,27 +120,35 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'crop' : [holoviews.streams.stream]
-                        Holoviews stream object enabling dynamic selection in response to 
-                        cropping tool. `stream.data` contains x and y coordinates of crop
-                        boundary vertices.
-                'ftype' : (only if batch processing) 
-                          video file type extension (e.g. 'wmv') [str]
-                'f0' : first frame of video [numpy array]
-                'FileNames' : (only if batch processing)
-                              List of filenames of videos in folder to be batch 
-                              processed.  [list]
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
                 
     
     -------------------------------------------------------------------------------------
@@ -267,26 +276,35 @@ def Reference(video_dict,num_frames=100,
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
         
         num_frames:: [uint]
             Number of frames to base reference frame on.
@@ -438,26 +456,35 @@ def Locate(cap,tracking_params,video_dict,prior=None):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
         
         prior:: [list]
             If window is being used, list of length 2 is passed, where first index is 
@@ -561,26 +588,35 @@ def TrackLocation(video_dict,tracking_params):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array] 
                               
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -699,26 +735,35 @@ def LocationThresh_View(video_dict,tracking_params,examples=4):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array] 
             
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -829,26 +874,35 @@ def ROI_plot(video_dict):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
                                       
     
     -------------------------------------------------------------------------------------
@@ -923,26 +977,35 @@ def ROI_Location(video_dict, location):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array] 
         
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
@@ -1023,26 +1086,35 @@ def Summarize_Location(location, video_dict, bin_dict=None):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
                               
         bin_dict:: [dict]
             Dictionary specifying bins.  Dictionary keys should be names of the bins.  
@@ -1109,26 +1181,35 @@ def Batch_LoadFiles(video_dict):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
 
     
     -------------------------------------------------------------------------------------
@@ -1137,25 +1218,35 @@ def Batch_LoadFiles(video_dict):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array] regions, equal to
                                  None. [bool numpy array) 
     
     -------------------------------------------------------------------------------------
@@ -1190,26 +1281,35 @@ def Batch_Process(video_dict,tracking_params,bin_dict,scale_dict=None, dist=None
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array] 
         
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -1339,26 +1439,35 @@ def PlayVideo(video_dict,display_dict,location):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -1468,26 +1577,35 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -1592,35 +1710,40 @@ def showtrace(video_dict, location, color="red",alpha=.8,size=3):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
         
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
             distance travelled, as well as video information and parameter values. 
-        
-        poly_stream:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            selection tool. `poly_stream.data` contains x and y coordinates of roi 
-            vertices.
+
             
         color:: [str]
             Color of trace.  See Holoviews documentation for color options
@@ -1683,26 +1806,35 @@ def Heatmap (video_dict, location, sigma=None):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
         
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
@@ -1760,26 +1892,35 @@ def DistanceTool(video_dict):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                'f0' : first frame of video [numpy array]
-                'mask' : [dict]
-                    Dictionary with the following keys:
-                        'mask' : boolean numpy array identifying regions to exlude
-                                 from analysis.  If no such regions, equal to
-                                 None. [bool numpy array) 
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
         
     
     -------------------------------------------------------------------------------------
@@ -1915,21 +2056,20 @@ def Mask_select(video_dict, fstfile=False):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
-                'stretch' : Dictionary with the following keys:
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
-                'ftype' : (only if batch processing) 
-                          video file type extension (e.g. 'wmv') [str]
-                'FileNames' : (only if batch processing)
-                              List of filenames of videos in folder to be batch 
-                              processed.  [list]
-                'f0' : first frame of video [numpy array]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1938,6 +2078,13 @@ def Mask_select(video_dict, fstfile=False):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
 
         fstfile:: [bool]
             Dictates whether to use first file in video_dict['FileNames'] to generate
