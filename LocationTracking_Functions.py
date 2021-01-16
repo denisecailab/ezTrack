@@ -72,7 +72,6 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
                 'end' : frame at which to end.  set to None if processing 
                         whole video [int]
@@ -543,7 +542,7 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
     
 ########################################################################################        
 
-def TrackLocation(video_dict,tracking_params,reference,crop=None):
+def TrackLocation(video_dict,tracking_params,reference,poly_stream,crop=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -607,7 +606,12 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
          
         reference:: [numpy.array]
             Reference image that the current frame is compared to.
-            
+        
+        poly_stream:: [holoviews.streams.stream]
+            Holoviews stream object enabling dynamic selection in response to 
+            selection tool. `poly_stream.data` contains x and y coordinates of roi 
+            vertices.
+        
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
             cropping tool. `crop.data` contains x and y coordinates of crop
@@ -678,6 +682,9 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
      'Y': Y,
      'Distance_px': D
     })
+    
+    #add region of interest info
+    df = ROI_Location(video_dict,reference,df,poly_stream) 
        
     return df
 
@@ -822,7 +829,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
 
 ########################################################################################    
     
-def ROI_plot(video_dict, reference, region_names):
+def ROI_plot(video_dict, reference):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -859,10 +866,6 @@ def ROI_plot(video_dict, reference, region_names):
                                  
         reference:: [numpy.array]
             Reference image that the current frame is compared to.
-            
-        region_names:: [list]
-            List containing names of regions to be drawn.  Should be set to None if no
-            regions are used.
         
     
     -------------------------------------------------------------------------------------
@@ -883,7 +886,7 @@ def ROI_plot(video_dict, reference, region_names):
     """
     
     #get number of objects to be drawn
-    nobjects = len(region_names) if region_names else 0 
+    nobjects = len(video_dict['region_names']) if video_dict['region_names'] else 0 
 
     #Make reference image the base image on which to draw
     image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference))
@@ -892,7 +895,7 @@ def ROI_plot(video_dict, reference, region_names):
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
-              title="No Regions to Draw" if nobjects == 0 else "Draw Regions: "+', '.join(region_names))
+              title="No Regions to Draw" if nobjects == 0 else "Draw Regions: "+', '.join(video_dict['region_names']))
 
     #Create polygon element on which to draw and connect via stream to PolyDraw drawing tool
     poly = hv.Polygons([])
@@ -906,7 +909,7 @@ def ROI_plot(video_dict, reference, region_names):
             x_ls, y_ls = [], []
         xs = [np.mean(x) for x in x_ls]
         ys = [np.mean(y) for y in y_ls]
-        rois = region_names[:len(xs)]
+        rois = video_dict['region_names'][:len(xs)]
         return hv.Labels((xs, ys, rois))
     
     if nobjects > 0:
@@ -921,7 +924,7 @@ def ROI_plot(video_dict, reference, region_names):
     
 ########################################################################################    
 
-def ROI_Location(reference,location,region_names,poly_stream):
+def ROI_Location(video_dict,reference,location,poly_stream):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -931,6 +934,31 @@ def ROI_Location(reference,location,region_names,poly_stream):
     
     -------------------------------------------------------------------------------------
     Args:
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array) 
+                                 
         reference:: [numpy.array]
             Reference image that the current frame is compared to.
         
@@ -938,10 +966,6 @@ def ROI_Location(reference,location,region_names,poly_stream):
             Pandas dataframe with frame by frame x and y locations,
             distance travelled, as well as video information and parameter values. 
             Must contain column names 'X' and 'Y'.
-                                                
-        region_names:: [list]
-            List containing names of regions to be drawn.  Should be set to None if no
-            regions are used.
             
         poly_stream:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
@@ -962,6 +986,9 @@ def ROI_Location(reference,location,region_names,poly_stream):
     Notes:
     
     """
+    
+    if video_dict['region_names'] == None:
+        return location
 
     #Create ROI Masks
     ROI_masks = {}
@@ -971,7 +998,7 @@ def ROI_Location(reference,location,region_names,poly_stream):
         xy = np.column_stack((x,y)).astype('uint64') #xy coordinate pairs
         mask = np.zeros(reference.shape) # create empty mask
         cv2.fillPoly(mask, pts =[xy], color=255) #fill polygon  
-        ROI_masks[region_names[poly]] = mask==255 #save to ROI masks as boolean 
+        ROI_masks[video_dict['region_names'][poly]] = mask==255 #save to ROI masks as boolean 
 
     #Create arrays to store whether animal is within given ROI
     ROI_location = {}
@@ -999,7 +1026,7 @@ def ROI_Location(reference,location,region_names,poly_stream):
 
 ########################################################################################        
     
-def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
+def Summarize_Location(location, video_dict, bin_dict=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1047,10 +1074,7 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
             (i.e. if start frame is 100, it will be relative to that). If no bins are to 
             be specified, set bin_dict = None.
             example: bin_dict = {1:(0,100), 2:(100,200)}                             
-            
-        region_names:: [list]
-            List containing names of regions to be drawn.  Should be set to None if no
-            regions are used.
+
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1068,18 +1092,17 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
     #define bins
     avg_dict = {'all': (location['Frame'].min(), location['Frame'].max())}   
     bin_dict = bin_dict if bin_dict is not None else avg_dict
-    #bin_dict = {k: tuple((np.array(v) * video_dict['fps']).tolist()) for k, v in bin_dict.items()}
     
     #get summary info
     bins = (pd.Series(bin_dict).rename('range(f)')
             .reset_index().rename(columns=dict(index='bin')))    
     bins['Distance_px'] = bins['range(f)'].apply(
         lambda r: location[location['Frame'].between(*r)]['Distance_px'].sum())
-    if region_names is not None:
+    if video_dict['region_names'] is not None:
         bins_reg = bins['range(f)'].apply(
-            lambda r: location[location['Frame'].between(*r)][region_names].mean())
+            lambda r: location[location['Frame'].between(*r)][video_dict['region_names']].mean())
         bins = bins.join(bins_reg)
-        drp_cols = ['Distance_px', 'Frame', 'X', 'Y'] + region_names
+        drp_cols = ['Distance_px', 'Frame', 'X', 'Y'] + video_dict['region_names']
     else:
         drp_cols = ['Distance_px', 'Frame', 'X', 'Y']
     bins = pd.merge(
@@ -1178,7 +1201,7 @@ def Batch_LoadFiles(video_dict):
         
 ######################################################################################## 
 
-def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None, 
+def Batch_Process(video_dict,tracking_params,bin_dict, 
                   scale_dict=None, dist=None, 
                   crop=None,poly_stream=None):   
     """ 
@@ -1248,10 +1271,6 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
             (i.e. if start frame is 100, it will be relative to that). If no bins are to 
             be specified, set bin_dict = None.
             example: bin_dict = {1:(0,100), 2:(100,200)}  
-                                  
-        region_names:: [list]
-            List containing names of regions to be drawn.  Should be set to None if no
-            regions are used.
         
         scale_dict:: [dict]
             Dictionary with the following keys:
@@ -1310,15 +1329,13 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
         
-        reference,image = Reference(video_dict,crop=crop,num_frames=100) 
-        location = TrackLocation(video_dict,tracking_params,reference,crop=crop)
+        reference,image = Reference(video_dict,crop=crop,num_frames=50) 
+        location = TrackLocation(video_dict,tracking_params,reference,poly_stream,crop=crop)
         
-        if region_names!=None:
-            location = ROI_Location(reference,location,region_names,poly_stream)
         if scale_dict!=None:
             location = ScaleDistance(scale_dict, dist, df=location, column='Distance_px')
         location.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv', index=False)
-        file_summary = Summarize_Location(location, video_dict, bin_dict=bin_dict, region_names=region_names)
+        file_summary = Summarize_Location(location, video_dict, bin_dict=bin_dict)
                
         try: 
             summary_all = pd.concat([summary_all,file_summary],sort=False)
@@ -1327,8 +1344,8 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
         if scale_dict!=None:
             summary_all = ScaleDistance(scale_dict, dist, df=summary_all, column='Distance_px')
         
-        trace = showtrace(reference,location,poly_stream)
-        heatmap = Heatmap(reference, location, sigma=None)
+        trace = showtrace(video_dict,reference,location,poly_stream)
+        heatmap = Heatmap(video_dict,reference, location, sigma=None)
         images = images + [(trace.opts(title=file)), (heatmap.opts(title=file))]
 
     #Write summary data to csv file
