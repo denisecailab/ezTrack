@@ -81,6 +81,10 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
                         *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -391,7 +395,7 @@ def Reference(video_dict,num_frames=100,
 
 ########################################################################################
 
-def Locate(cap,reference,tracking_params,video_dict,prior=None):
+def Locate(cap,tracking_params,video_dict,prior=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -401,9 +405,6 @@ def Locate(cap,reference,tracking_params,video_dict,prior=None):
     Args:
         cap:: [cv2.VideoCapture]
             OpenCV VideoCapture class instance for video.
-        
-        reference:: [numpy array]
-            Reference image that the current frame is compared to.
         
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -509,11 +510,11 @@ def Locate(cap,reference,tracking_params,video_dict,prior=None):
         
         #find difference from reference
         if tracking_params['method'] == 'abs':
-            dif = np.absolute(frame-reference)
+            dif = np.absolute(frame-video_dict['reference'])
         elif tracking_params['method'] == 'light':
-            dif = frame-reference
+            dif = frame-video_dict['reference']
         elif tracking_params['method'] == 'dark':
-            dif = reference-frame
+            dif = video_dict['reference']-frame
         dif = dif.astype('int16')
         if 'mask' in video_dict.keys():
             if video_dict['mask']['mask'] is not None:
@@ -547,7 +548,7 @@ def Locate(cap,reference,tracking_params,video_dict,prior=None):
     
 ########################################################################################        
 
-def TrackLocation(video_dict,tracking_params,reference,poly_stream):
+def TrackLocation(video_dict,tracking_params):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -607,15 +608,7 @@ def TrackLocation(video_dict,tracking_params,reference,poly_stream):
                            the animal is lighter than the background. 'dark' specifies that 
                            the animal is darker than the background. 
                 'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
-                'wire_krn' : size of kernel used for morphological opening to remove wire. [int]
-         
-        reference:: [numpy.array]
-            Reference image that the current frame is compared to.
-        
-        poly_stream:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            selection tool. `poly_stream.data` contains x and y coordinates of roi 
-            vertices.      
+                'wire_krn' : size of kernel used for morphological opening to remove wire. [int]    
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -645,11 +638,9 @@ def TrackLocation(video_dict,tracking_params,reference,poly_stream):
         if f>0: 
             yprior = np.around(Y[f-1]).astype(int)
             xprior = np.around(X[f-1]).astype(int)
-            ret,dif,com,frame = Locate(cap,reference,tracking_params,
-                                       video_dict,prior=[yprior,xprior])
+            ret,dif,com,frame = Locate(cap,tracking_params,video_dict,prior=[yprior,xprior])
         else:
-            ret,dif,com,frame = Locate(cap,reference,tracking_params,
-                                       video_dict)
+            ret,dif,com,frame = Locate(cap,tracking_params,video_dict)
                                                 
         if ret == True:          
             Y[f] = com[0]
@@ -683,7 +674,7 @@ def TrackLocation(video_dict,tracking_params,reference,poly_stream):
     })
     
     #add region of interest info
-    df = ROI_Location(video_dict,reference,df,poly_stream) 
+    df = ROI_Location(video_dict, df) 
        
     return df
 
@@ -693,7 +684,7 @@ def TrackLocation(video_dict,tracking_params,reference,poly_stream):
 
 ########################################################################################
 
-def LocationThresh_View(video_dict,reference,tracking_params,examples=4):
+def LocationThresh_View(video_dict,tracking_params,examples=4):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -728,9 +719,6 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4):
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                                      
-        reference:: [numpy.array]
-            Reference image that the current frame is compared to.
             
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -789,24 +777,29 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4):
         #analyze frame
         frm=np.random.randint(video_dict['start'],cap_max) #select random frame
         cap.set(cv2.CAP_PROP_POS_FRAMES,frm) #sets frame to be next to be grabbed
-        ret,dif,com,frame = Locate(cap,reference,tracking_params, video_dict) 
+        ret,dif,com,frame = Locate(cap, tracking_params, video_dict) 
 
         #plot original frame
         image_orig = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
-        image_orig.opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
-                   height=int(reference.shape[0]*video_dict['stretch']['height']),
-                   invert_yaxis=True,cmap='gray',toolbar='below',
-                   title="Frame: " + str(frm))
+        image_orig.opts(
+            width=int(video_dict['reference'].shape[1]*video_dict['stretch']['width']),
+            height=int(video_dict['reference'].shape[0]*video_dict['stretch']['height']),
+            invert_yaxis=True,cmap='gray',toolbar='below',
+            title="Frame: " + str(frm))
         orig_overlay = image_orig * hv.Points(([com[1]],[com[0]])).opts(
             color='red',size=20,marker='+',line_width=3) 
         
         #plot heatmap
         dif = dif*(255//dif.max())
-        image_heat = hv.Image((np.arange(dif.shape[1]), np.arange(dif.shape[0]), dif))
-        image_heat.opts(width=int(dif.shape[1]*video_dict['stretch']['width']),
-                   height=int(dif.shape[0]*video_dict['stretch']['height']),
-                   invert_yaxis=True,cmap='jet',toolbar='below',
-                   title="Frame: " + str(frm))
+        image_heat = hv.Image((
+            np.arange(dif.shape[1]), 
+            np.arange(dif.shape[0]), 
+            dif))
+        image_heat.opts(
+            width=int(dif.shape[1]*video_dict['stretch']['width']),
+            height=int(dif.shape[0]*video_dict['stretch']['height']),
+            invert_yaxis=True,cmap='jet',toolbar='below',
+            title="Frame: " + str(frm))
         heat_overlay = image_heat * hv.Points(([com[1]],[com[0]])).opts(
             color='red',size=20,marker='+',line_width=3) 
         
@@ -822,7 +815,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4):
 
 ########################################################################################    
     
-def ROI_plot(video_dict, reference):
+def ROI_plot(video_dict):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -856,10 +849,7 @@ def ROI_plot(video_dict, reference):
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                                 
-        reference:: [numpy.array]
-            Reference image that the current frame is compared to.
-        
+                                      
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -882,13 +872,15 @@ def ROI_plot(video_dict, reference):
     nobjects = len(video_dict['region_names']) if video_dict['region_names'] else 0 
 
     #Make reference image the base image on which to draw
-    image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference))
-    image.opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
-               height=int(reference.shape[0]*video_dict['stretch']['height']),
-              invert_yaxis=True,cmap='gray',
-              colorbar=True,
-               toolbar='below',
-              title="No Regions to Draw" if nobjects == 0 else "Draw Regions: "+', '.join(video_dict['region_names']))
+    image = hv.Image((
+        np.arange(video_dict['reference'].shape[1]),
+        np.arange(video_dict['reference'].shape[0]),
+        video_dict['reference']))
+    image.opts(
+        width=int(video_dict['reference'].shape[1]*video_dict['stretch']['width']),
+        height=int(video_dict['reference'].shape[0]*video_dict['stretch']['height']),
+        invert_yaxis=True,cmap='gray', colorbar=True,toolbar='below',
+        title="No Regions to Draw" if nobjects == 0 else "Draw Regions: "+', '.join(video_dict['region_names']))
 
     #Create polygon element on which to draw and connect via stream to PolyDraw drawing tool
     poly = hv.Polygons([])
@@ -917,7 +909,7 @@ def ROI_plot(video_dict, reference):
     
 ########################################################################################    
 
-def ROI_Location(video_dict,reference,location,poly_stream):
+def ROI_Location(video_dict, location):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -951,20 +943,12 @@ def ROI_Location(video_dict,reference,location,poly_stream):
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                                 
-        reference:: [numpy.array]
-            Reference image that the current frame is compared to.
         
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
             distance travelled, as well as video information and parameter values. 
             Must contain column names 'X' and 'Y'.
-            
-        poly_stream:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            selection tool. `poly_stream.data` contains x and y coordinates of roi 
-            vertices.
-    
+
     -------------------------------------------------------------------------------------
     Returns:
         location:: [pandas.dataframe]
@@ -985,11 +969,11 @@ def ROI_Location(video_dict,reference,location,poly_stream):
 
     #Create ROI Masks
     ROI_masks = {}
-    for poly in range(len(poly_stream.data['xs'])):
-        x = np.array(poly_stream.data['xs'][poly]) #x coordinates
-        y = np.array(poly_stream.data['ys'][poly]) #y coordinates
+    for poly in range(len(video_dict['roi_stream'].data['xs'])):
+        x = np.array(video_dict['roi_stream'].data['xs'][poly]) #x coordinates
+        y = np.array(video_dict['roi_stream'].data['ys'][poly]) #y coordinates
         xy = np.column_stack((x,y)).astype('uint64') #xy coordinate pairs
-        mask = np.zeros(reference.shape) # create empty mask
+        mask = np.zeros(video_dict['reference'].shape) # create empty mask
         cv2.fillPoly(mask, pts =[xy], color=255) #fill polygon  
         ROI_masks[video_dict['region_names'][poly]] = mask==255 #save to ROI masks as boolean 
 
@@ -1009,7 +993,7 @@ def ROI_Location(video_dict,reference,location,poly_stream):
         location[x]=ROI_location[x]
     
     #Add ROI coordinates
-    location['ROI_coordinates']=str(poly_stream.data)
+    location['ROI_coordinates']=str(video_dict['roi_stream'].data)
     
     return location
 
@@ -1194,9 +1178,7 @@ def Batch_LoadFiles(video_dict):
         
 ######################################################################################## 
 
-def Batch_Process(video_dict,tracking_params,bin_dict, 
-                  scale_dict=None, dist=None, 
-                  crop=None,poly_stream=None):   
+def Batch_Process(video_dict,tracking_params,bin_dict,scale_dict=None, dist=None):   
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1276,17 +1258,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,
             Dictionary with the following keys:
                 'd' : Euclidean distance between two reference points, in pixel units, 
                       rounded to thousandth. Returns None if no less than 2 points have 
-                      been selected. [numeric]                        
-            
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.
-            
-        poly_stream:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            selection tool. `poly_stream.data` contains x and y coordinates of roi 
-            vertices.    
+                      been selected. [numeric]
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1322,8 +1294,8 @@ def Batch_Process(video_dict,tracking_params,bin_dict,
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
         
-        reference,image = Reference(video_dict,num_frames=50) 
-        location = TrackLocation(video_dict,tracking_params,reference,poly_stream)
+        video_dict['reference'], image = Reference(video_dict,num_frames=50) 
+        location = TrackLocation(video_dict,tracking_params)
         
         if scale_dict!=None:
             location = ScaleDistance(scale_dict, dist, df=location, column='Distance_px')
@@ -1337,8 +1309,8 @@ def Batch_Process(video_dict,tracking_params,bin_dict,
         if scale_dict!=None:
             summary_all = ScaleDistance(scale_dict, dist, df=summary_all, column='Distance_px')
         
-        trace = showtrace(video_dict,reference,location,poly_stream)
-        heatmap = Heatmap(video_dict,reference, location, sigma=None)
+        trace = showtrace(video_dict,location)
+        heatmap = Heatmap(video_dict, location, sigma=None)
         images = images + [(trace.opts(title=file)), (heatmap.opts(title=file))]
 
     #Write summary data to csv file
@@ -1607,7 +1579,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
     
 ########################################################################################
 
-def showtrace(video_dict, reference,location, poly_stream=None, color="red",alpha=.8,size=3):
+def showtrace(video_dict, location, color="red",alpha=.8,size=3):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1640,9 +1612,6 @@ def showtrace(video_dict, reference,location, poly_stream=None, color="red",alph
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                                 
-        reference:: [numpy array]
-            Reference image that the current frame is compared to.
         
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
@@ -1673,25 +1642,26 @@ def showtrace(video_dict, reference,location, poly_stream=None, color="red",alph
 
     """
     
-    if poly_stream != None:
+    video_dict['roi_stream'] = video_dict['roi_stream'] if 'roi_stream' in video_dict else None
+    if video_dict['roi_stream'] != None:
         lst = []
-        for poly in range(len(poly_stream.data['xs'])):
-            x = np.array(poly_stream.data['xs'][poly]) #x coordinates
-            y = np.array(poly_stream.data['ys'][poly]) #y coordinates
+        for poly in range(len(video_dict['roi_stream'].data['xs'])):
+            x = np.array(video_dict['roi_stream'].data['xs'][poly]) #x coordinates
+            y = np.array(video_dict['roi_stream'].data['ys'][poly]) #y coordinates
             lst.append( [ (x[vert],y[vert]) for vert in range(len(x)) ] )
         poly = hv.Polygons(lst).opts(fill_alpha=0.1,line_dash='dashed')
         
-    image = hv.Image((np.arange(reference.shape[1]),
-                      np.arange(reference.shape[0]),
-                      reference)
-                    ).opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
-                           height=int(reference.shape[0]*video_dict['stretch']['height']),
+    image = hv.Image((np.arange(video_dict['reference'].shape[1]),
+                      np.arange(video_dict['reference'].shape[0]),
+                      video_dict['reference'])
+                    ).opts(width=int(video_dict['reference'].shape[1]*video_dict['stretch']['width']),
+                           height=int(video_dict['reference'].shape[0]*video_dict['stretch']['height']),
                            invert_yaxis=True,cmap='gray',toolbar='below',
                            title="Motion Trace")
     
     points = hv.Scatter(np.array([location['X'],location['Y']]).T).opts(color='red',alpha=alpha,size=size)
     
-    return (image*poly*points) if poly_stream!=None else (image*points)
+    return (image*poly*points) if video_dict['roi_stream']!=None else (image*points)
 
 
 
@@ -1699,7 +1669,7 @@ def showtrace(video_dict, reference,location, poly_stream=None, color="red",alph
 
 ########################################################################################    
 
-def Heatmap (video_dict, reference, location, sigma=None):
+def Heatmap (video_dict, location, sigma=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1733,9 +1703,6 @@ def Heatmap (video_dict, reference, location, sigma=None):
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                                 
-        reference:: [numpy array]
-            Reference image that the current frame is compared to.
         
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
@@ -1755,7 +1722,7 @@ def Heatmap (video_dict, reference, location, sigma=None):
         stretch only affects display
 
     """    
-    heatmap = np.zeros(reference.shape)
+    heatmap = np.zeros(video_dict['reference'].shape)
     for frame in range(len(location)):
         Y,X = int(location.Y[frame]), int(location.X[frame])
         heatmap[Y,X]+=1
@@ -1778,7 +1745,7 @@ def Heatmap (video_dict, reference, location, sigma=None):
 
 ########################################################################################    
 
-def DistanceTool(video_dict, reference):
+def DistanceTool(video_dict):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1813,9 +1780,6 @@ def DistanceTool(video_dict, reference):
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array) 
-                                 
-        reference:: [numpy.array]
-            Reference image or other 2d image.
         
     
     -------------------------------------------------------------------------------------
@@ -1838,9 +1802,12 @@ def DistanceTool(video_dict, reference):
     """
 
     #Make reference image the base image on which to draw
-    image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference))
-    image.opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
-               height=int(reference.shape[0]*video_dict['stretch']['height']),
+    image = hv.Image((
+        np.arange(video_dict['reference'].shape[1]), 
+        np.arange(video_dict['reference'].shape[0]), 
+        video_dict['reference']))
+    image.opts(width=int(video_dict['reference'].shape[1]*video_dict['stretch']['width']),
+               height=int(video_dict['reference'].shape[0]*video_dict['stretch']['height']),
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
