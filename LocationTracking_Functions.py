@@ -56,7 +56,7 @@ warnings.filterwarnings("ignore")
 
 ########################################################################################    
 
-def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfile=False):
+def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -78,6 +78,9 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -88,12 +91,7 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
-                
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch frame width [float]
-                'height' : proportion by which to stretch frame height [float]
+                                 None. [bool numpy array)  
                 
         cropmethod:: [str]
             Method of cropping video.  cropmethod takes the following values:
@@ -181,8 +179,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
 
     #Make first image reference frame on which cropping can be performed
     image = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
-    image.opts(width=int(frame.shape[1]*stretch['width']),
-               height=int(frame.shape[0]*stretch['height']),
+    image.opts(width=int(frame.shape[1]*video_dict['stretch']['width']),
+               height=int(frame.shape[0]*video_dict['stretch']['height']),
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
@@ -245,7 +243,7 @@ def cropframe(frame,crop=None):
 
 ########################################################################################
 
-def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100,
+def Reference(video_dict, crop=None,num_frames=100,
               altfile=False,fstfile=False,frames=None):
     """ 
     -------------------------------------------------------------------------------------
@@ -266,6 +264,9 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -276,12 +277,7 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
-        
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch frame width [float]
-                'height' : proportion by which to stretch frame height [float]
+                                 None. [bool numpy array) 
                 
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
@@ -374,8 +370,8 @@ def Reference(video_dict,stretch=dict(width=1,height=1),crop=None,num_frames=100
     reference = np.median(collection,axis=0)
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]), 
-                      reference)).opts(width=int(reference.shape[1]*stretch['width']),
-                                       height=int(reference.shape[0]*stretch['height']),
+                      reference)).opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
+                                       height=int(reference.shape[0]*video_dict['stretch']['height']),
                                        invert_yaxis=True,
                                        cmap='gray',
                                        colorbar=True,
@@ -430,7 +426,32 @@ def Locate(cap,reference,tracking_params,video_dict,crop=None,prior=None):
                            the animal is darker than the background. 
                 'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
                 'wire_krn' : size of kernel used for morphological opening to remove wire. [int]
-        
+                
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array) 
+                                 
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
             cropping tool. `crop.data` contains x and y coordinates of crop
@@ -541,6 +562,9 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -551,7 +575,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
                               
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -663,7 +687,7 @@ def TrackLocation(video_dict,tracking_params,reference,crop=None):
 
 ########################################################################################
 
-def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=None,stretch={'width':1,'height':1}):
+def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -673,9 +697,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
     
     -------------------------------------------------------------------------------------
     Args:
-        examples:: [uint]
-            The number of frames for location tracking to be tested on.
-        
+  
         video_dict:: [dict]
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
@@ -686,6 +708,9 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -696,7 +721,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
                                       
         reference:: [numpy.array]
             Reference image that the current frame is compared to.
@@ -737,11 +762,6 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
             cropping tool. `crop.data` contains x and y coordinates of crop
             boundary vertices.
         
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch height for display purposes
-                'height' : proportion by which to stretch height for display purposes
-        
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -773,8 +793,8 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
 
         #plot original frame
         image_orig = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
-        image_orig.opts(width=int(reference.shape[1]*stretch['width']),
-                   height=int(reference.shape[0]*stretch['height']),
+        image_orig.opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
+                   height=int(reference.shape[0]*video_dict['stretch']['height']),
                    invert_yaxis=True,cmap='gray',toolbar='below',
                    title="Frame: " + str(frm))
         orig_overlay = image_orig * hv.Points(([com[1]],[com[0]])).opts(
@@ -783,8 +803,8 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
         #plot heatmap
         dif = dif*(255//dif.max())
         image_heat = hv.Image((np.arange(dif.shape[1]), np.arange(dif.shape[0]), dif))
-        image_heat.opts(width=int(dif.shape[1]*stretch['width']),
-                   height=int(dif.shape[0]*stretch['height']),
+        image_heat.opts(width=int(dif.shape[1]*video_dict['stretch']['width']),
+                   height=int(dif.shape[0]*video_dict['stretch']['height']),
                    invert_yaxis=True,cmap='jet',toolbar='below',
                    title="Frame: " + str(frm))
         heat_overlay = image_heat * hv.Points(([com[1]],[com[0]])).opts(
@@ -802,7 +822,7 @@ def LocationThresh_View(video_dict,reference,tracking_params,examples=4,crop=Non
 
 ########################################################################################    
     
-def ROI_plot(reference,region_names,stretch={'width':1,'height':1}):
+def ROI_plot(video_dict, reference, region_names):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -812,20 +832,37 @@ def ROI_plot(reference,region_names,stretch={'width':1,'height':1}):
     
     -------------------------------------------------------------------------------------
     Args:
-
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array) 
+                                 
         reference:: [numpy.array]
             Reference image that the current frame is compared to.
             
         region_names:: [list]
             List containing names of regions to be drawn.  Should be set to None if no
             regions are used.
-        
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch height for display purposes 
-                          [float]
-                'height' : proportion by which to stretch height for display purposes
-                           [float]
         
     
     -------------------------------------------------------------------------------------
@@ -850,8 +887,8 @@ def ROI_plot(reference,region_names,stretch={'width':1,'height':1}):
 
     #Make reference image the base image on which to draw
     image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference))
-    image.opts(width=int(reference.shape[1]*stretch['width']),
-               height=int(reference.shape[0]*stretch['height']),
+    image.opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
+               height=int(reference.shape[0]*video_dict['stretch']['height']),
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
@@ -988,6 +1025,9 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -998,7 +1038,7 @@ def Summarize_Location(location, video_dict, bin_dict=None, region_names=None):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
                               
         bin_dict:: [dict]
             Dictionary specifying bins.  Dictionary keys should be names of the bins.  
@@ -1075,6 +1115,9 @@ def Batch_LoadFiles(video_dict):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1085,7 +1128,7 @@ def Batch_LoadFiles(video_dict):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
 
     
     -------------------------------------------------------------------------------------
@@ -1100,6 +1143,9 @@ def Batch_LoadFiles(video_dict):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1110,7 +1156,7 @@ def Batch_LoadFiles(video_dict):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -1133,7 +1179,7 @@ def Batch_LoadFiles(video_dict):
 ######################################################################################## 
 
 def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None, 
-                  stretch={'width':1,'height':1}, scale_dict=None, dist=None, 
+                  scale_dict=None, dist=None, 
                   crop=None,poly_stream=None):   
     """ 
     -------------------------------------------------------------------------------------
@@ -1152,6 +1198,9 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1162,7 +1211,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
         
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -1215,12 +1264,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
             Dictionary with the following keys:
                 'd' : Euclidean distance between two reference points, in pixel units, 
                       rounded to thousandth. Returns None if no less than 2 points have 
-                      been selected. [numeric]
-            
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch height for display purposes
-                'height' : proportion by which to stretch height for display purposes                            
+                      been selected. [numeric]                        
             
         crop:: [holoviews.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
@@ -1283,8 +1327,8 @@ def Batch_Process(video_dict,tracking_params,bin_dict,region_names=None,
         if scale_dict!=None:
             summary_all = ScaleDistance(scale_dict, dist, df=summary_all, column='Distance_px')
         
-        trace = showtrace(reference,location,poly_stream,stretch=stretch)
-        heatmap = Heatmap(reference, location, sigma=None, stretch=stretch)
+        trace = showtrace(reference,location,poly_stream)
+        heatmap = Heatmap(reference, location, sigma=None)
         images = images + [(trace.opts(title=file)), (heatmap.opts(title=file))]
 
     #Write summary data to csv file
@@ -1319,6 +1363,9 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1329,7 +1376,7 @@ def PlayVideo(video_dict,display_dict,location,crop=None):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -1449,6 +1496,9 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1459,7 +1509,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
-                                 None. [bool numpy array)
+                                 None. [bool numpy array) 
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -1551,7 +1601,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
     
 ########################################################################################
 
-def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3,stretch=dict(width=1,height=1)):
+def showtrace(video_dict, reference,location, poly_stream=None, color="red",alpha=.8,size=3):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1560,6 +1610,31 @@ def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3,
     -------------------------------------------------------------------------------------
     Args:
         
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array) 
+                                 
         reference:: [numpy array]
             Reference image that the current frame is compared to.
         
@@ -1603,8 +1678,8 @@ def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3,
     image = hv.Image((np.arange(reference.shape[1]),
                       np.arange(reference.shape[0]),
                       reference)
-                    ).opts(width=int(reference.shape[1]*stretch['width']),
-                           height=int(reference.shape[0]*stretch['height']),
+                    ).opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
+                           height=int(reference.shape[0]*video_dict['stretch']['height']),
                            invert_yaxis=True,cmap='gray',toolbar='below',
                            title="Motion Trace")
     
@@ -1618,7 +1693,7 @@ def showtrace(reference,location, poly_stream=None, color="red",alpha=.8,size=3,
 
 ########################################################################################    
 
-def Heatmap (reference, location, sigma=None, stretch=dict(width=1,height=1)):
+def Heatmap (video_dict, reference, location, sigma=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1628,6 +1703,31 @@ def Heatmap (reference, location, sigma=None, stretch=dict(width=1,height=1)):
     -------------------------------------------------------------------------------------
     Args:
         
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array) 
+                                 
         reference:: [numpy array]
             Reference image that the current frame is compared to.
         
@@ -1637,11 +1737,7 @@ def Heatmap (reference, location, sigma=None, stretch=dict(width=1,height=1)):
                 
         sigma:: [numeric]
             Optional number specifying sigma of guassian filter
-                               
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch height for display purposes
-                'height' : proportion by which to stretch height for display purposes      
+  
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1663,8 +1759,8 @@ def Heatmap (reference, location, sigma=None, stretch=dict(width=1,height=1)):
     heatmap = (heatmap / heatmap.max())*255
     
     map_i = hv.Image((np.arange(heatmap.shape[1]), np.arange(heatmap.shape[0]), heatmap))
-    map_i.opts(width=int(heatmap.shape[1]*stretch['width']),
-           height=int(heatmap.shape[0]*stretch['height']),
+    map_i.opts(width=int(heatmap.shape[1]*video_dict['stretch']['width']),
+           height=int(heatmap.shape[0]*video_dict['stretch']['height']),
            invert_yaxis=True, cmap='jet', alpha=1,
            colorbar=False, toolbar='below', title="Heatmap")
     
@@ -1676,7 +1772,7 @@ def Heatmap (reference, location, sigma=None, stretch=dict(width=1,height=1)):
 
 ########################################################################################    
 
-def DistanceTool(reference,stretch={'width':1,'height':1}):
+def DistanceTool(video_dict, reference):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1686,16 +1782,34 @@ def DistanceTool(reference,stretch={'width':1,'height':1}):
     
     -------------------------------------------------------------------------------------
     Args:
-
+        
+        video_dict:: [dict]
+            Dictionary with the following keys:
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'fps' : frames per second of video files to be processed [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : first frame of video [numpy array]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array) 
+                                 
         reference:: [numpy.array]
             Reference image or other 2d image.
-        
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch height for display purposes 
-                          [float]
-                'height' : proportion by which to stretch height for display purposes
-                           [float]
         
     
     -------------------------------------------------------------------------------------
@@ -1719,8 +1833,8 @@ def DistanceTool(reference,stretch={'width':1,'height':1}):
 
     #Make reference image the base image on which to draw
     image = hv.Image((np.arange(reference.shape[1]), np.arange(reference.shape[0]), reference))
-    image.opts(width=int(reference.shape[1]*stretch['width']),
-               height=int(reference.shape[0]*stretch['height']),
+    image.opts(width=int(reference.shape[1]*video_dict['stretch']['width']),
+               height=int(reference.shape[0]*video_dict['stretch']['height']),
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
@@ -1814,7 +1928,7 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
 
 ########################################################################################    
     
-def Mask_select(video_dict,stretch,crop=None,fstfile=False):
+def Mask_select(video_dict,crop=None,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1834,6 +1948,9 @@ def Mask_select(video_dict,stretch,crop=None,fstfile=False):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1845,13 +1962,6 @@ def Mask_select(video_dict,stretch,crop=None,fstfile=False):
                         'mask' : boolean numpy array identifying regions to exlude
                                  from analysis.  If no such regions, equal to
                                  None. [bool numpy array)                             
-        
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch height for display purposes 
-                          [float]
-                'height' : proportion by which to stretch height for display purposes
-                           [float]
                            
         crop:: [hv.streams.stream]
             Holoviews stream object enabling dynamic selection in response to 
@@ -1909,8 +2019,8 @@ def Mask_select(video_dict,stretch,crop=None,fstfile=False):
     #Make first image the base image on which to draw
     f0 = cropframe(video_dict['f0'],crop=crop)
     image = hv.Image((np.arange(f0.shape[1]), np.arange(f0.shape[0]), f0))
-    image.opts(width=int(f0.shape[1]*stretch['width']),
-               height=int(f0.shape[0]*stretch['height']),
+    image.opts(width=int(f0.shape[1]*video_dict['stretch']['width']),
+               height=int(f0.shape[0]*video_dict['stretch']['height']),
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',

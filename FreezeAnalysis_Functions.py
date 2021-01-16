@@ -49,7 +49,7 @@ warnings.filterwarnings("ignore")
 
 ########################################################################################        
 
-def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfile=False):
+def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -71,16 +71,14 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
-                
-        stretch:: [dict]
-            Dictionary with the following keys:
-                'width' : proportion by which to stretch frame width [float]
-                'height' : proportion by which to stretch frame height [float]
                 
         cropmethod:: [str]
             Method of cropping video.  cropmethod takes the following values:
@@ -164,8 +162,8 @@ def LoadAndCrop(video_dict,stretch={'width':1,'height':1},cropmethod=None,fstfil
 
     #Make first image reference frame on which cropping can be performed
     image = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
-    image.opts(width=int(frame.shape[1]*stretch['width']),
-               height=int(frame.shape[0]*stretch['height']),
+    image.opts(width=int(frame.shape[1]*video_dict['stretch']['width']),
+               height=int(frame.shape[0]*video_dict['stretch']['height']),
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
@@ -207,6 +205,9 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -416,6 +417,9 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -563,6 +567,9 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -710,6 +717,9 @@ def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -787,6 +797,9 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -882,6 +895,9 @@ def Batch_LoadFiles(video_dict):
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -895,15 +911,20 @@ def Batch_LoadFiles(video_dict):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video file/files to be processed [int]
+                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
-                'end' : frame at which to end.  set to None if processing whole 
-                        video [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
-                              List of filenames of videos in folder to be 
-                              batch processed.  [list]
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -944,6 +965,9 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA
                         whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1047,9 +1071,19 @@ def Calibrate(video_dict,cal_pix,SIGMA):
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
                 'fps' : frames per second of video files to be processed [int]
-                'cal_sec' : number of seconds to calibrate based upon [int]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
         
         cal_pix:: [int]
             Number of pixels in frame to base calibration upon. Random selection of 
