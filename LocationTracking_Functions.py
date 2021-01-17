@@ -94,6 +94,13 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -142,6 +149,13 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -298,6 +312,13 @@ def Reference(video_dict,num_frames=100,
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -357,7 +378,7 @@ def Reference(video_dict,num_frames=100,
                     cv2.INTER_NEAREST)
     frame = cropframe(
         frame, 
-        video_dict['crop'] if 'crop' in video_dict.keys() else None
+        video_dict.get('crop')
     )
     h,w = frame.shape[0], frame.shape[1]
     cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
@@ -387,7 +408,7 @@ def Reference(video_dict,num_frames=100,
                         cv2.INTER_NEAREST)
                 gray = cropframe(
                     gray, 
-                    video_dict['crop'] if 'crop' in video_dict.keys() else None
+                    video_dict.get('crop')
                 )
                 collection[idx,:,:]=gray
                 grabbed = True
@@ -478,6 +499,13 @@ def Locate(cap,tracking_params,video_dict,prior=None):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -531,8 +559,8 @@ def Locate(cap,tracking_params,video_dict,prior=None):
                 ),
                 cv2.INTER_NEAREST)
         frame = cropframe(
-            frame, 
-            video_dict['crop'] if 'crop' in video_dict.keys() else None
+            frame,
+            video_dict.get('crop')
         )
         
         #find difference from reference
@@ -610,6 +638,13 @@ def TrackLocation(video_dict,tracking_params):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -693,6 +728,7 @@ def TrackLocation(video_dict,tracking_params):
             
     #release video
     cap.release()
+    time.sleep(.5)
     print('total frames processed: {f}\n'.format(f=len(D)))
     
     #create pandas dataframe
@@ -711,6 +747,9 @@ def TrackLocation(video_dict,tracking_params):
     
     #add region of interest info
     df = ROI_Location(video_dict, df) 
+    
+    #update scale, if known
+    df = ScaleDistance(video_dict, df=df, column='Distance_px')
        
     return df
 
@@ -757,13 +796,20 @@ def LocationThresh_View(video_dict,tracking_params,examples=4):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
                 'f0' : (only if batch processing)
-                        first frame of video [numpy array] 
+                        first frame of video [numpy array]
             
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -896,6 +942,13 @@ def ROI_plot(video_dict):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -999,13 +1052,20 @@ def ROI_Location(video_dict, location):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
                 'f0' : (only if batch processing)
-                        first frame of video [numpy array] 
+                        first frame of video [numpy array]
         
         location:: [pandas.dataframe]
             Pandas dataframe with frame by frame x and y locations,
@@ -1108,6 +1168,13 @@ def Summarize_Location(location, video_dict, bin_dict=None):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1160,6 +1227,9 @@ def Summarize_Location(location, video_dict, bin_dict=None):
         left_index=True,
         right_index=True)
     
+    #scale distance
+    bins = ScaleDistance(video_dict,df=bins,column='Distance_px') 
+    
     return bins
 
 
@@ -1203,6 +1273,13 @@ def Batch_LoadFiles(video_dict):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1240,14 +1317,20 @@ def Batch_LoadFiles(video_dict):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
                 'f0' : (only if batch processing)
-                        first frame of video [numpy array] regions, equal to
-                                 None. [bool numpy array) 
+                        first frame of video [numpy array]
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -1269,7 +1352,7 @@ def Batch_LoadFiles(video_dict):
         
 ######################################################################################## 
 
-def Batch_Process(video_dict,tracking_params,bin_dict,scale_dict=None, dist=None):   
+def Batch_Process(video_dict,tracking_params,bin_dict):   
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1303,13 +1386,20 @@ def Batch_Process(video_dict,tracking_params,bin_dict,scale_dict=None, dist=None
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
                 'f0' : (only if batch processing)
-                        first frame of video [numpy array] 
+                        first frame of video [numpy array]
         
         tracking_params:: [dict]
             Dictionary with the following keys:
@@ -1338,27 +1428,7 @@ def Batch_Process(video_dict,tracking_params,bin_dict,scale_dict=None, dist=None
                            the animal is darker than the background. 
                 'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
                 'wire_krn' : size of kernel used for morphological opening to remove wire. [int]
-        
-        bin_dict:: [dict]
-            Dictionary specifying bins.  Dictionary keys should be names of the bins.  
-            Dictionary value for each bin should be a tuple, with the start and end of 
-            the bin, in seconds, relative to the start of the analysis period 
-            (i.e. if start frame is 100, it will be relative to that). If no bins are to 
-            be specified, set bin_dict = None.
-            example: bin_dict = {1:(0,100), 2:(100,200)}  
-        
-        scale_dict:: [dict]
-            Dictionary with the following keys:
-                'distance' : distance between reference points, in desired scale 
-                             (e.g. cm) [numeric]
-                'scale' : string containing name of scale (e.g. 'cm') [str]
-                'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
-        
-        dist:: [dict]
-            Dictionary with the following keys:
-                'd' : Euclidean distance between two reference points, in pixel units, 
-                      rounded to thousandth. Returns None if no less than 2 points have 
-                      been selected. [numeric]
+ 
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1396,9 +1466,6 @@ def Batch_Process(video_dict,tracking_params,bin_dict,scale_dict=None, dist=None
         
         video_dict['reference'], image = Reference(video_dict,num_frames=50) 
         location = TrackLocation(video_dict,tracking_params)
-        
-        if scale_dict!=None:
-            location = ScaleDistance(scale_dict, dist, df=location, column='Distance_px')
         location.to_csv(os.path.splitext(video_dict['fpath'])[0] + '_LocationOutput.csv', index=False)
         file_summary = Summarize_Location(location, video_dict, bin_dict=bin_dict)
                
@@ -1406,8 +1473,6 @@ def Batch_Process(video_dict,tracking_params,bin_dict,scale_dict=None, dist=None
             summary_all = pd.concat([summary_all,file_summary],sort=False)
         except NameError: 
             summary_all = file_summary
-        if scale_dict!=None:
-            summary_all = ScaleDistance(scale_dict, dist, df=summary_all, column='Distance_px')
         
         trace = showtrace(video_dict,location)
         heatmap = Heatmap(video_dict, location, sigma=None)
@@ -1461,6 +1526,13 @@ def PlayVideo(video_dict,display_dict,location):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1599,6 +1671,13 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1621,11 +1700,7 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
             distance travelled, as well as video information and parameter values. 
             Additionally, for each region of interest, boolean array indicating whether 
             animal is in the given region for each frame. 
-        
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.       
+  
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1732,6 +1807,13 @@ def showtrace(video_dict, location, color="red",alpha=.8,size=3):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1828,6 +1910,13 @@ def Heatmap (video_dict, location, sigma=None):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1914,6 +2003,13 @@ def DistanceTool(video_dict):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -1968,12 +2064,12 @@ def DistanceTool(video_dict):
         if len(x_ls) > 1:
             x_dist = (x_ls[0] - x_ls[1])
             y_dist = (y_ls[0] - y_ls[1])
-            distance['d'] = np.around( (x_dist**2 + y_dist**2)**(1/2), 3)
-            text = "{dist} px".format(dist=distance['d'])
+            distance['px_distance'] = np.around( (x_dist**2 + y_dist**2)**(1/2), 3)
+            text = "{dist} px".format(dist=distance['px_distance'])
         return hv.Labels((x_ctr, y_ctr, text if len(x_ls) > 1 else "")).opts(
             text_color='blue',text_font_size='14pt')
     
-    distance = dict(d=None)
+    distance = dict(px_distance=None)
     markers_ptl = fct.partial(markers, distance=distance)
     dmap = hv.DynamicMap(markers_ptl, streams=[pointDraw_stream])
     return (image * points * dmap), distance
@@ -1984,7 +2080,7 @@ def DistanceTool(video_dict):
 
 ########################################################################################    
 
-def ScaleDistance(scale_dict, dist=None, df=None, column=None):
+def ScaleDistance(video_dict, df=None, column=None):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1995,18 +2091,46 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
     -------------------------------------------------------------------------------------
     Args:
 
-        scale_dict:: [dict]
+        video_dict:: [dict]
             Dictionary with the following keys:
-                'distance' : distance between reference points, in desired scale 
-                             (e.g. cm) [numeric]
-                'scale' : string containing name of scale (e.g. 'cm') [str]
-                'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
-        
-        dist:: [dict]
-            Dictionary with the following keys:
-                'd' : Euclidean distance between two reference points, in pixel units, 
-                      rounded to thousandth. Returns None if no less than 2 points have 
-                      been selected. [numeric]
+                'dpath' : directory containing files [str]
+                'file' : filename with extension, e.g. 'myvideo.wmv' [str]
+                'start' : frame at which to start. 0-based [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
+                'region_names' : list of names of regions.  if no regions, set to None
+                'dsmpl' : proptional degree to which video should be downsampled
+                        by (0-1).
+                'stretch' : Dictionary used to alter display of frames, with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
+                        *Does not influence actual processing, unlike dsmpl.
+                'reference': Reference image that the current frame is compared to. [numpy.array]
+                'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
+                               selection tool. `poly_stream.data` contains x and y coordinates of roi 
+                               vertices. [hv.streams.stream]
+                'mask' : [dict]
+                    Dictionary with the following keys:
+                        'mask' : boolean numpy array identifying regions to exlude
+                                 from analysis.  If no such regions, equal to
+                                 None. [bool numpy array)   
+                        'mask_stream' : Holoviews stream object enabling dynamic selection 
+                                in response to selection tool. `mask_stream.data` contains 
+                                x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
+                'ftype' : (only if batch processing) 
+                          video file type extension (e.g. 'wmv') [str]
+                'FileNames' : (only if batch processing)
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'f0' : (only if batch processing)
+                        first frame of video [numpy array]
         
         df:: [pandas.dataframe]
             Pandas dataframe with column to be scaled.
@@ -2025,11 +2149,14 @@ def ScaleDistance(scale_dict, dist=None, df=None, column=None):
           calculation
     
     """
+    
+    if 'scale' not in video_dict.keys():
+        return df
 
-    if dist['d']!= None:
-        scale_dict['factor'] = scale_dict['distance']/dist['d']
-        new_column = "_".join(['Distance', scale_dict['scale']])
-        df[new_column] = df[column]*scale_dict['factor']
+    if video_dict['scale']['px_distance']!= None:
+        video_dict['scale']['factor'] = video_dict['scale']['true_distance']/video_dict['scale']['px_distance']
+        new_column = "_".join(['Distance', video_dict['scale']['true_scale']])
+        df[new_column] = df[column]*video_dict['scale']['factor']
         order = [col for col in df if col not in [column,new_column]]
         order = order + [column,new_column]
         df = df[order]
@@ -2078,6 +2205,13 @@ def Mask_select(video_dict, fstfile=False):
                         'mask_stream' : Holoviews stream object enabling dynamic selection 
                                 in response to selection tool. `mask_stream.data` contains 
                                 x and y coordinates of region vertices. [holoviews polystream]
+                'scale:: [dict]
+                        Dictionary with the following keys:
+                            'px_distance' : distance between reference points, in pixels [numeric]
+                            'true_distance' : distance between reference points, in desired scale 
+                                               (e.g. cm) [numeric]
+                            'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                            'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -2137,7 +2271,7 @@ def Mask_select(video_dict, fstfile=False):
     #Make first image the base image on which to draw
     f0 = cropframe(
         video_dict['f0'],
-        video_dict['crop'] if 'crop' in video_dict.keys() else None
+        video_dict.get('crop')
     )
     image = hv.Image((np.arange(f0.shape[1]), np.arange(f0.shape[0]), f0))
     image.opts(width=int(f0.shape[1]*video_dict['stretch']['width']),
