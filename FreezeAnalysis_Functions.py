@@ -74,6 +74,8 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                 'stretch' : Dictionary with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
+                'crop' : Enables dynamic box selection for selection of cropping parameters
+                         [hv.streams.BoxEdit]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
@@ -93,12 +95,7 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     Returns:
         image:: [holoviews.Image]
             Holoviews hv.Image displaying first frame
-            
-        stream:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `stream.data` contains x and y coordinates of crop
-            boundary vertices.
-            
+
         video_dict:: [dict]
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
@@ -172,21 +169,20 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     #Create polygon element on which to draw and connect via stream to poly drawing tool
     if cropmethod==None:
         image.opts(title="First Frame")
-        return image,None,video_dict
+        video_dict['crop'] = None
+        return image, video_dict
     
     if cropmethod=='Box':         
         box = hv.Polygons([])
         box.opts(alpha=.5)
-        box_stream = streams.BoxEdit(source=box,num_objects=1)     
-        return (image*box),box_stream,video_dict  
-    
-
+        video_dict['crop'] = streams.BoxEdit(source=box,num_objects=1)     
+        return (image*box), video_dict 
     
     
     
 ########################################################################################
 
-def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
+def Measure_Motion (video_dict,mt_cutoff,SIGMA=1):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -217,11 +213,6 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
         mt_cutoff:: [float]
             Threshold value for determining magnitude of change sufficient to mark
             pixel as changing from prior frame.
-                
-        crop:: [holoviews.streams.stream]
-            Holoviews stream object enabling dynamic selection in response to 
-            cropping tool. `crop.data` contains x and y coordinates of crop
-            boundary vertices.
                 
         SIGMA:: [float]
             Sigma value for gaussian filter applied to each image. Passed to 
@@ -257,11 +248,12 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
                         int(frame_new.shape[0]*video_dict['dsmpl'])
                     ),
                     cv2.INTER_NEAREST)
-    frame_new = cropframe(frame_new, crop)
+    frame_new = cropframe(frame_new, video_dict.get('crop'))
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)  
     Motion = np.zeros(cap_max - video_dict['start'])
 
     #Loop through frames to detect frame by frame differences
+    time.sleep(.2) #allow printing
     for x in tqdm(range(1,len(Motion))):
         frame_old = frame_new
         ret, frame_new = cap.read()
@@ -276,7 +268,7 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
                         int(frame_new.shape[0]*video_dict['dsmpl'])
                     ),
                     cv2.INTER_NEAREST)
-            frame_new = cropframe(frame_new, crop)
+            frame_new = cropframe(frame_new, video_dict.get('crop'))
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)  
             frame_dif = np.absolute(frame_new - frame_old)
             frame_cut = (frame_dif > mt_cutoff).astype('uint8')
@@ -288,6 +280,7 @@ def Measure_Motion (video_dict,mt_cutoff,crop=None,SIGMA=1):
             break
         
     cap.release() #release video
+    time.sleep(.2) #allow printing
     print('total frames processed: {f}\n'.format(f=len(Motion)))
     return(Motion) #return motion values
 
@@ -398,7 +391,7 @@ def Measure_Freezing(Motion,FreezeThresh,MinDuration=0):
 
 ########################################################################################
 
-def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
+def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,SIGMA=1):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -483,7 +476,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                 int(frame_new.shape[0]*video_dict['dsmpl'])
             ),
             cv2.INTER_NEAREST)
-    frame_new = cropframe(frame_new, crop)
+    frame_new = cropframe(frame_new, video_dict.get('crop'))
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
     #Initialize video storage if desired
@@ -511,7 +504,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                         int(frame_new.shape[0]*video_dict['dsmpl'])
                     ),
                     cv2.INTER_NEAREST)
-            frame_new = cropframe(frame_new, crop)
+            frame_new = cropframe(frame_new, video_dict.get('crop'))
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA) 
             frame_dif = np.absolute(frame_new - frame_old)
             frame_cut = (frame_dif > mt_cutoff).astype('uint8')*255
@@ -548,7 +541,7 @@ def display_image(frame,fps,resize):
     
 ########################################################################################
 
-def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
+def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,SIGMA=1):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -637,7 +630,7 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                 int(frame_new.shape[0]*video_dict['dsmpl'])
             ),
             cv2.INTER_NEAREST)
-    frame_new = cropframe(frame_new, crop)
+    frame_new = cropframe(frame_new, video_dict.get('crop'))
     frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA)
 
     #Initialize video storage if desired
@@ -669,7 +662,7 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,crop=None,SIGMA=1):
                         int(frame_new.shape[0]*video_dict['dsmpl'])
                     ),
                     cv2.INTER_NEAREST)
-            frame_new = cropframe(frame_new, crop)
+            frame_new = cropframe(frame_new, video_dict.get('crop'))
             frame_new = cv2.GaussianBlur(frame_new.astype('float'),(0,0),SIGMA) 
             frame_dif = np.absolute(frame_new - frame_old)
             frame_cut = (frame_dif > mt_cutoff).astype('uint8')*255
@@ -947,7 +940,7 @@ def Batch_LoadFiles(video_dict):
 ########################################################################################
         
         
-def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA=1):
+def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1033,7 +1026,7 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,crop=None,SIGMA
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
 
         #Analyze frame by frame motion and freezing and save csv of results
-        Motion = Measure_Motion(video_dict,mt_cutoff,crop,SIGMA=1)  
+        Motion = Measure_Motion(video_dict,mt_cutoff,SIGMA=1)  
         Freezing = Measure_Freezing(Motion,FreezeThresh,MinDuration)  
         SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration)
         summary = Summarize(video_dict,Motion,Freezing,FreezeThresh,

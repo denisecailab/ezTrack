@@ -86,6 +86,8 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection for selection of cropping parameters
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -141,6 +143,8 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection for selection of cropping parameters
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -304,6 +308,10 @@ def Reference(video_dict,num_frames=100,
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -491,6 +499,10 @@ def Locate(cap,tracking_params,video_dict,prior=None):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -630,6 +642,10 @@ def TrackLocation(video_dict,tracking_params):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -704,6 +720,7 @@ def TrackLocation(video_dict,tracking_params):
     D = np.zeros(cap_max - video_dict['start'])
 
     #Loop through frames to detect frame by frame differences
+    time.sleep(.2) #allow printing
     for f in tqdm(range(len(D))):
         
         if f>0: 
@@ -728,7 +745,7 @@ def TrackLocation(video_dict,tracking_params):
             
     #release video
     cap.release()
-    time.sleep(.5)
+    time.sleep(.2) #allow printing
     print('total frames processed: {f}\n'.format(f=len(D)))
     
     #create pandas dataframe
@@ -788,6 +805,10 @@ def LocationThresh_View(video_dict,tracking_params,examples=4):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -934,6 +955,10 @@ def ROI_plot(video_dict):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1044,6 +1069,10 @@ def ROI_Location(video_dict, location):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1160,6 +1189,10 @@ def Summarize_Location(location, video_dict, bin_dict=None):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1265,6 +1298,10 @@ def Batch_LoadFiles(video_dict):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1309,6 +1346,10 @@ def Batch_LoadFiles(video_dict):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1378,6 +1419,10 @@ def Batch_Process(video_dict,tracking_params,bin_dict):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1518,6 +1563,10 @@ def PlayVideo(video_dict,display_dict,location):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1663,6 +1712,10 @@ def PlayVideo_ext(video_dict,display_dict,location,crop=None):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1799,6 +1852,10 @@ def showtrace(video_dict, location, color="red",alpha=.8,size=3):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1902,6 +1959,10 @@ def Heatmap (video_dict, location, sigma=None):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -1995,6 +2056,10 @@ def DistanceTool(video_dict):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -2109,6 +2174,10 @@ def ScaleDistance(video_dict, df=None, column=None):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
@@ -2197,6 +2266,10 @@ def Mask_select(video_dict, fstfile=False):
                 'roi_stream' : Holoviews stream object enabling dynamic selection in response to 
                                selection tool. `poly_stream.data` contains x and y coordinates of roi 
                                vertices. [hv.streams.stream]
+                'crop' : Enables dynamic box selection of cropping parameters.  
+                         Holoviews stream object enabling dynamic selection in response to 
+                         `stream.data` contains x and y coordinates of crop boundary vertices.
+                         [hv.streams.BoxEdit]
                 'mask' : [dict]
                     Dictionary with the following keys:
                         'mask' : boolean numpy array identifying regions to exlude
