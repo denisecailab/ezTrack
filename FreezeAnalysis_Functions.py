@@ -74,13 +74,12 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
                 'stretch' : Dictionary with the following keys:
                         'width' : proportion by which to stretch frame width [float]
                         'height' : proportion by which to stretch frame height [float]
-                'crop' : Enables dynamic box selection for selection of cropping parameters
-                         [hv.streams.BoxEdit]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
                 
         cropmethod:: [str]
             Method of cropping video.  cropmethod takes the following values:
@@ -100,17 +99,21 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
             Dictionary with the following keys:
                 'dpath' : directory containing files [str]
                 'file' : filename with extension, e.g. 'myvideo.wmv' [str]
-                'fps' : frames per second of video file/files to be processed [int]
+                'fps' : frames per second of video files to be processed [int]
                 'start' : frame at which to start. 0-based [int]
-                'end' : frame at which to end.  set to None if processing whole 
-                        video [int]
+                'end' : frame at which to end.  set to None if processing 
+                        whole video [int]
                 'dsmpl' : proptional degree to which video should be downsampled
                         by (0-1).
+                'stretch' : Dictionary with the following keys:
+                        'width' : proportion by which to stretch frame width [float]
+                        'height' : proportion by which to stretch frame height [float]
                 'ftype' : (only if batch processing) 
                           video file type extension (e.g. 'wmv') [str]
                 'FileNames' : (only if batch processing)
-                              List of filenames of videos in folder to be 
-                              batch processed.  [list]
+                              List of filenames of videos in folder to be batch 
+                              processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
     
     -------------------------------------------------------------------------------------
     Notes:
@@ -209,6 +212,7 @@ def Measure_Motion (video_dict,mt_cutoff,SIGMA=1):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
                 
         mt_cutoff:: [float]
             Threshold value for determining magnitude of change sufficient to mark
@@ -418,6 +422,7 @@ def PlayVideo(video_dict,display_dict,Freezing,mt_cutoff,SIGMA=1):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -568,6 +573,7 @@ def PlayVideo_ext(video_dict,display_dict,Freezing,mt_cutoff,SIGMA=1):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
                 
         display_dict:: [dict]
             Dictionary with the following keys:
@@ -718,6 +724,7 @@ def SaveData(video_dict,Motion,Freezing,mt_cutoff,FreezeThresh,MinDuration):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
                               
         Motion:: [numpy.array]
             Array containing number of pixels per frame whose intensity change from
@@ -798,6 +805,7 @@ def Summarize(video_dict,Motion,Freezing,FreezeThresh,MinDuration,mt_cutoff,bin_
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
                               
         Motion:: [numpy.array]
             Array containing number of pixels per frame whose intensity change from
@@ -896,6 +904,7 @@ def Batch_LoadFiles(video_dict):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
 
     
     -------------------------------------------------------------------------------------
@@ -966,6 +975,7 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
                               
         bin_dict:: [dict]
             Dictionary specifying bins.  Dictionary keys should be names of the bins.  
@@ -1077,6 +1087,7 @@ def Calibrate(video_dict,cal_pix,SIGMA):
                 'FileNames' : (only if batch processing)
                               List of filenames of videos in folder to be batch 
                               processed.  [list]
+                'cal_frms' : number of frames to calibrate based upon
         
         cal_pix:: [int]
             Number of pixels in frame to base calibration upon. Random selection of 
@@ -1102,9 +1113,6 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
-    
-    #set seconds to examine and frames
-    cal_frames = video_dict['cal_sec']*video_dict['fps']
 
     #Initialize matrix for difference values
     cal_dif = np.zeros((cal_frames,cal_pix))
@@ -1133,7 +1141,7 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     w_loc = w_loc.astype(int)
 
     #Loop through frames to detect frame by frame differences
-    for x in range (1,cal_frames):
+    for x in range (1,video_dict['cal_frms']):
 
         #Reset old frame
         frame_old = frame_new
