@@ -1115,7 +1115,7 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     cap = cv2.VideoCapture(video_dict['fpath'])
 
     #Initialize matrix for difference values
-    cal_dif = np.zeros((cal_frames,cal_pix))
+    cal_dif = np.zeros((video_dict['cal_frms'],cal_pix))
 
     #Initialize video
     cap.set(cv2.CAP_PROP_POS_FRAMES,0) 
