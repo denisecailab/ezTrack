@@ -2140,7 +2140,52 @@ def DistanceTool(video_dict):
     return (image * points * dmap), distance
 
 
+########################################################################################
 
+def setScale(distance, scale, scale_dict):
+
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Updates dictionary with scale information, given the true distance between points 
+    (e.g. 100), and the scale unit (e.g. 'cm')
+    
+    -------------------------------------------------------------------------------------
+    Args:
+    
+        distance :: [numeric]
+            The real-world distance between the selected points
+        
+        scale :: [string]
+            The scale used for defining the real world distance.  Can be any string
+            (e.g. 'cm', 'in', 'inch', 'stone')
+
+        scale_dict :: [dict]
+            Dictionary with the following keys:
+                'px_distance' : distance between reference points, in pixels [numeric]
+                'true_distance' : distance between reference points, in desired scale 
+                                   (e.g. cm) [numeric]
+                'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
+
+    -------------------------------------------------------------------------------------
+    Returns:
+        scale_dict :: [dict]
+                Dictionary with the following keys:
+                    'px_distance' : distance between reference points, in pixels [numeric]
+                    'true_distance' : distance between reference points, in desired scale 
+                                       (e.g. cm) [numeric]
+                    'true_scale' : string containing name of scale (e.g. 'cm') [str]
+                    'factor' : ratio of desired scale to pixel (e.g. cm/pixel [numeric]
+    -------------------------------------------------------------------------------------
+    Notes:
+
+    """
+
+    scale_dict['true_distance'] = distance
+    scale_dict['true_scale'] = scale
+    return scale_dict
+    
 
 
 ########################################################################################    
