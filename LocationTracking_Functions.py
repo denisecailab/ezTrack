@@ -2113,7 +2113,7 @@ def DistanceTool(video_dict):
               invert_yaxis=True,cmap='gray',
               colorbar=True,
                toolbar='below',
-              title="Calculate Distance")
+              title="Select Points")
 
     #Create Point instance on which to draw and connect via stream to pointDraw drawing tool 
     points = hv.Points([]).opts(active_tools=['point_draw'], color='red',size=10)
