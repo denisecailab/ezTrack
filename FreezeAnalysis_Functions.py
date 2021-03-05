@@ -138,7 +138,7 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     #Print video information. Note that max frame is updated later if fewer frames detected
     cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
     print('total frames: {frames}'.format(frames=cap_max))
-    print('nominal fps: {fps}'.format(fps=int(cap.get(cv2.CAP_PROP_FPS))))
+    print('nominal fps: {fps}'.format(fps=cap.get(cv2.CAP_PROP_FPS)))
     print('dimensions (h x w): {h},{w}'.format(
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
@@ -1030,7 +1030,7 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
         cap = cv2.VideoCapture(video_dict['fpath'])
         cap_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) 
         print('total frames: {frames}'.format(frames=cap_max))
-        print('nominal fps: {fps}'.format(fps=int(cap.get(cv2.CAP_PROP_FPS))))
+        print('nominal fps: {fps}'.format(fps=cap.get(cv2.CAP_PROP_FPS)))
         print('dimensions (h x w): {h},{w}'.format(
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
