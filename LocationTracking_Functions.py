@@ -421,6 +421,7 @@ def Reference(video_dict,num_frames=100,
                 collection[idx,:,:]=gray
                 grabbed = True
             elif ret == False:
+                framenum = np.random.randint(video_dict['start'],cap_max,1)[0]
                 pass
     cap.release() 
 
