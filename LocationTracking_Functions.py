@@ -888,9 +888,11 @@ def LocationThresh_View(video_dict,tracking_params,examples=4):
     for example in range (examples):
         
         #analyze frame
-        frm=np.random.randint(video_dict['start'],cap_max) #select random frame
-        cap.set(cv2.CAP_PROP_POS_FRAMES,frm) #sets frame to be next to be grabbed
-        ret,dif,com,frame = Locate(cap, tracking_params, video_dict) 
+        ret = False
+        while ret is False:     
+            frm=np.random.randint(video_dict['start'],cap_max) #select random frame
+            cap.set(cv2.CAP_PROP_POS_FRAMES,frm) #sets frame to be next to be grabbed
+            ret,dif,com,frame = Locate(cap, tracking_params, video_dict) 
 
         #plot original frame
         image_orig = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
