@@ -7,6 +7,7 @@ This repository contains iPython files that can be used to track the location, m
 Pennington ZT, Dong Z, Feng Y, Vetere LM, Page-Harley L, Shuman T, Cai DJ (2019). ezTrack: An open-source video analysis pipeline for the investigation of animal behavior. Scientific Reports: 9(1): 19979
 
 # New Feature Alerts:
+- 04/11/2020: ezTrack now has algorithm for removing wires in the location tracking module.
 - 07/20/2020: ezTrack now supports spatial downsampling of videos!  You can reduce the resolution of the video to greatly speed processing. Processing high-definition videos on older laptops/desktops can be slow, but by downsampling, processing speeds are much faster.
 - 07/19/2020: Location tracking module now allows user to manually define frame numbers to be used when selecting reference.  This is useful if baseline portion of video without animal will be used for reference, and resolves issue when alternative video being used for reference is a different length than the video being processed.
 - 06/16/2020:  Location tracking module now allows user to define regions of frame that they would like excluded from the analysis.  This is useful in situations where an extraneous object enters into periphery, or even center, of the field of view.
@@ -26,7 +27,7 @@ The iPython scripts included in this repository require the following packages t
 
 3. From the ezTrack github page, download all files onto your computer. On the main page of the repository, click the button to ‘Clone or download’, and download the zip folder onto your hard drive (don't forget to unzip the folder). The unzipped folder is called ezTrack-master and contains all files necessary to run ezTrack.  Alternatively, use git commands if you are familiar with them (`git clone https://github.com/DeniseCaiLab/ezTrack.git`)
 
-4. Activate the ezTrack Conda environment from Terminal/Anaconda Prompt.  On OSX/Linux, use your finder to open Terminal and enter the command: `source activate ezTrack`.  On a Windows os, search for 'Anaconda Prompt'.  Once open, enter the command `conda activate ezTrack`.  
+4. Activate the ezTrack Conda environment from Terminal/Anaconda Prompt.  On OSX/Linux, use your finder to open Terminal and enter the command: `conda activate ezTrack`.  On a Windows os, search for 'Anaconda Prompt'. 
 
 5. Launch Jupyter Notebook from Terminal/Anaconda Prompt (command: `jupyter notebook`). 
 
