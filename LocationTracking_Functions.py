@@ -599,11 +599,18 @@ def Locate(cap,tracking_params,video_dict,prior=None):
             
         #threshold differences and find center of mass for remaining values
         dif[dif<np.percentile(dif,tracking_params['loc_thresh'])]=0
+        
         #remove influence of wire
         if tracking_params['rmv_wire'] == True:
             ksize = tracking_params['wire_krn']
             kernel = np.ones((ksize,ksize),np.uint8)
-            dif = cv2.morphologyEx(dif, cv2.MORPH_OPEN, kernel)
+            dif_wirermv = cv2.morphologyEx(dif, cv2.MORPH_OPEN, kernel)
+            krn_violation =  dif_wirermv.sum()==0
+            dif = dif if krn_violation else dif_wirermv
+            if krn_violation:
+                print("WARNING: wire_krn too large. Reverting to rmv_wire=False for frame {x}".format(
+                    x= int(cap.get(cv2.CAP_PROP_POS_FRAMES)-1-video_dict['start'])))
+            
         com=ndimage.measurements.center_of_mass(dif)
         return ret, dif, com, frame
     
@@ -914,7 +921,7 @@ def LocationThresh_View(video_dict,tracking_params,examples=4):
             width=int(dif.shape[1]*video_dict['stretch']['width']),
             height=int(dif.shape[0]*video_dict['stretch']['height']),
             invert_yaxis=True,cmap='jet',toolbar='below',
-            title="Frame: " + str(frm))
+            title="Frame: " + str(frm - video_dict['start']))
         heat_overlay = image_heat * hv.Points(([com[1]],[com[0]])).opts(
             color='red',size=20,marker='+',line_width=3) 
         
