@@ -49,7 +49,7 @@ warnings.filterwarnings("ignore")
 
 ########################################################################################        
 
-def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
+def LoadAndCrop(video_dict,cropmethod=None,fstfile=False,accept_p_frames=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -89,6 +89,10 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
         fstfile:: [bool]
             Dictates whether to use first file in video_dict['FileNames'] to generate
             reference.  True/False
+        
+        accept_p_frames::[bool]
+            Dictates whether to allow videos with temporal compresssion.  Currenntly, if
+            more than 1/100 frames returns false, error is flagged.
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -142,6 +146,10 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     print('dimensions (h x w): {h},{w}'.format(
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
+    
+    #check for video p-frames
+    if accept_p_frames is False:
+        check_p_frames(cap)
 
     #Set first frame. 
     try:
@@ -949,7 +957,7 @@ def Batch_LoadFiles(video_dict):
 ########################################################################################
         
         
-def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
+def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1,accept_p_frames=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1004,7 +1012,11 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
             
         SIGMA:: [float]
             Sigma value for gaussian filter applied to each image. Passed to 
-            OpenCV `cv2.GuassianBlur`    
+            OpenCV `cv2.GuassianBlur` 
+        
+        accept_p_frames::[bool]
+            Dictates whether to allow videos with temporal compresssion.  Currenntly, if
+            more than 1/100 frames returns false, error is flagged.
 
     
     -------------------------------------------------------------------------------------
@@ -1034,6 +1046,9 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
         print('dimensions (h x w): {h},{w}'.format(
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
+        
+        if accept_p_frames is False:
+            check_p_frames(cap)
 
         #Analyze frame by frame motion and freezing and save csv of results
         Motion = Measure_Motion(video_dict,mt_cutoff,SIGMA=1)  
@@ -1059,7 +1074,7 @@ def Batch(video_dict,bin_dict,mt_cutoff,FreezeThresh,MinDuration,SIGMA=1):
 
 ########################################################################################
 
-def Calibrate(video_dict,cal_pix,SIGMA):
+def Calibrate(video_dict,cal_pix,SIGMA,accept_p_frames=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1096,8 +1111,11 @@ def Calibrate(video_dict,cal_pix,SIGMA):
             
         SIGMA:: [float]
             Sigma value for gaussian filter applied to each image. Passed to 
-            OpenCV `cv2.GuassianBlur`    
-
+            OpenCV `cv2.GuassianBlur`
+            
+        accept_p_frames::[bool]
+            Dictates whether to allow videos with temporal compresssion.  Currenntly, if
+            more than 1/100 frames returns false, error is flagged.
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1113,6 +1131,10 @@ def Calibrate(video_dict,cal_pix,SIGMA):
     
     #Upoad file
     cap = cv2.VideoCapture(video_dict['fpath'])
+    
+    #check for p frames
+    if accept_p_frames is False:
+        check_p_frames(cap)
 
     #Initialize matrix for difference values
     cal_dif = np.zeros((video_dict['cal_frms'],cal_pix))
@@ -1197,6 +1219,45 @@ def Calibrate(video_dict,cal_pix,SIGMA):
 
 
 
+
+def check_p_frames(cap, p_prop_allowed=.01, frames_checked=300):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Checks whether video contains substantial portion of p/blank frames
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        cap:: [cv2.videocapture]
+            OpenCV video capture object.
+        p_prop_allowed:: [numeric]
+            Proportion of putative p-frames permitted.  Alternatively, proportion of 
+            frames permitted to return False when grabbed.
+        frames_checked:: [numeric]
+            Number of frames to scan for p/blank frames.  If video is shorter
+            than number of frames specified, will use number of frames in video.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
+    
+    frames_checked = min(frames_checked, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+    p_allowed = int(frames_checked*p_prop_allowed)
+    
+    p_frms = 0
+    for i in range(frames_checked):
+        ret, frame = cap.read()
+        p_frms = p_frms+1 if ret==False else p_frms
+    if p_frms>p_allowed:
+        raise RuntimeError(
+            'Video compression method not supported. ' + \
+            'Approximately {p}% frames are p frames or blank. '.format(
+                p=(p_frms/frames_checked)*100) + \
+            'Consider video conversion.')
 
 
 ########################################################################################

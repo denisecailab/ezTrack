@@ -56,7 +56,7 @@ warnings.filterwarnings("ignore")
 
 ########################################################################################    
 
-def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
+def LoadAndCrop(video_dict,cropmethod=None,fstfile=False,accept_p_frames=False):
     """ 
     -------------------------------------------------------------------------------------
     
@@ -119,6 +119,10 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
         fstfile:: [bool]
             Dictates whether to use first file in video_dict['FileNames'] to generate
             reference.  True/False
+        
+        accept_p_frames::[bool]
+            Dictates whether to allow videos with temporal compresssion.  Currenntly, if
+            more than 1/100 frames returns false, error is flagged.
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -196,7 +200,11 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
     print('dimensions (h x w): {h},{w}'.format(
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
-
+    
+    #check for video p-frames
+    if accept_p_frames is False:
+        check_p_frames(cap)
+    
     #Set first frame
     cap.set(cv2.CAP_PROP_POS_FRAMES, video_dict['start']) 
     ret, frame = cap.read() 
@@ -214,12 +222,15 @@ def LoadAndCrop(video_dict,cropmethod=None,fstfile=False):
 
     #Make first image reference frame on which cropping can be performed
     image = hv.Image((np.arange(frame.shape[1]), np.arange(frame.shape[0]), frame))
-    image.opts(width=int(frame.shape[1]*video_dict['stretch']['width']),
-               height=int(frame.shape[0]*video_dict['stretch']['height']),
-              invert_yaxis=True,cmap='gray',
-              colorbar=True,
-               toolbar='below',
-              title="First Frame.  Crop if Desired")
+    image.opts(
+        width=int(frame.shape[1]*video_dict['stretch']['width']),
+        height=int(frame.shape[0]*video_dict['stretch']['height']),
+        invert_yaxis=True,
+        cmap='gray',
+        colorbar=True,
+        toolbar='below',
+        title="First Frame.  Crop if Desired"
+    )
     
     #Create polygon element on which to draw and connect via stream to poly drawing tool
     if cropmethod==None:
@@ -1403,7 +1414,7 @@ def Batch_LoadFiles(video_dict):
         
 ######################################################################################## 
 
-def Batch_Process(video_dict,tracking_params,bin_dict):   
+def Batch_Process(video_dict,tracking_params,bin_dict,accept_p_frames=False):   
     """ 
     -------------------------------------------------------------------------------------
     
@@ -1483,7 +1494,10 @@ def Batch_Process(video_dict,tracking_params,bin_dict):
                            the animal is darker than the background. 
                 'rmv_wire' : True/False, indicating whether to use wire removal function.  [bool] 
                 'wire_krn' : size of kernel used for morphological opening to remove wire. [int]
- 
+                
+         accept_p_frames::[bool]
+            Dictates whether to allow videos with temporal compresssion.  Currenntly, if
+            more than 1/100 frames returns false, error is flagged.
     
     -------------------------------------------------------------------------------------
     Returns:
@@ -1518,6 +1532,10 @@ def Batch_Process(video_dict,tracking_params,bin_dict):
         print('dimensions (h x w): {h},{w}'.format(
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))))
+        
+        #check for video p-frames
+        if accept_p_frames is False:
+            check_p_frames(cap)
         
         video_dict['reference'], image = Reference(video_dict,num_frames=50) 
         location = TrackLocation(video_dict,tracking_params)
@@ -2438,6 +2456,47 @@ def Mask_select(video_dict, fstfile=False):
     make_mask_ptl = fct.partial(make_mask, mask=mask)        
     dmap = hv.DynamicMap(make_mask_ptl, streams=[mask['stream']])
     return image*poly*dmap, mask
+
+
+
+def check_p_frames(cap, p_prop_allowed=.01, frames_checked=300):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Checks whether video contains substantial portion of p/blank frames
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        cap:: [cv2.videocapture]
+            OpenCV video capture object.
+        p_prop_allowed:: [numeric]
+            Proportion of putative p-frames permitted.  Alternatively, proportion of 
+            frames permitted to return False when grabbed.
+        frames_checked:: [numeric]
+            Number of frames to scan for p/blank frames.  If video is shorter
+            than number of frames specified, will use number of frames in video.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
+    
+    frames_checked = min(frames_checked, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+    p_allowed = int(frames_checked*p_prop_allowed)
+    
+    p_frms = 0
+    for i in range(frames_checked):
+        ret, frame = cap.read()
+        p_frms = p_frms+1 if ret==False else p_frms
+    if p_frms>p_allowed:
+        raise RuntimeError(
+            'Video compression method not supported. ' + \
+            'Approximately {p}% frames are p frames or blank. '.format(
+                p=(p_frms/frames_checked)*100) + \
+            'Consider video conversion.')
 
 
 ########################################################################################        
