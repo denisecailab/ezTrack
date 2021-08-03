@@ -1,0 +1,9 @@
+bokeh==2.1.1
+jupyter==1.0.0
+matplotlib==3.1.1
+opencv-python==3.4.3.18
+pandas==0.23.0
+Pillow
+holoviews==1.13.5
+scipy==1.2.1
+tqdm
