@@ -1,6 +1,7 @@
 # Behavior Tracking with ezTrack
 This repository contains iPython files that can be used to track the location, motion, and freezing of an animal. For the sake of clarity, these processes are described as two modules: one for the analysis of freezing; the other for tracking an animal's location.  **If you are unfamiliar with how to use iPython/Jupyter Notebook, please see [Getting Started](https://github.com/DeniseCaiLab/GettingStarted)**.
 
+![Examples](../master/Images/Examples.gif)
 
 # Please cite ezTrack if you use it in your research:
 Pennington ZT, Dong Z, Feng Y, Vetere LM, Page-Harley L, Shuman T, Cai DJ (2019). ezTrack: An open-source video analysis pipeline for the investigation of animal behavior. Scientific Reports: 9(1): 19979
