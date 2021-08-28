@@ -1,5 +1,5 @@
 # Behavior Tracking with ezTrack
-This repository contains iPython files that can be used to track the location, motion, and freezing of an animal. For the sake of clarity, these processes are described as two modules: one for the analysis of freezing; the other for tracking an animal's location.  **If you are unfamiliar with how to use iPython/Jupyter Notebook, please see [Getting Started](https://github.com/DeniseCaiLab/GettingStarted)**.
+This page iPython files that can be used to track the location, motion, and freezing of an animal. For the sake of clarity, these processes are described as two modules: one for tracking an animal's location; the other  for the analysis of freezing.  **If you are unfamiliar with how to use iPython/Jupyter Notebook, please see [Getting Started](https://github.com/DeniseCaiLab/GettingStarted)**.
 
 ![Examples](../master/Images/Examples.gif)
 
