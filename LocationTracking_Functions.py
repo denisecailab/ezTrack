@@ -737,6 +737,10 @@ def TrackLocation(video_dict,tracking_params):
     X = np.zeros(cap_max - video_dict['start'])
     Y = np.zeros(cap_max - video_dict['start'])
     D = np.zeros(cap_max - video_dict['start'])
+    if tracking_params['orient_track']:
+        A = np.zeros(cap_max - video_dict['start'])
+        A[0] = np.deg2rad(tracking_params['orient_start'])
+        ang_maxchg = np.deg2rad(tracking_params['orient_maxchg'])
 
     #Loop through frames to detect frame by frame differences
     time.sleep(.2) #allow printing
@@ -754,12 +758,25 @@ def TrackLocation(video_dict,tracking_params):
             X[f] = com[1]
             if f>0:
                 D[f] = np.sqrt((Y[f]-Y[f-1])**2 + (X[f]-X[f-1])**2)
+                if tracking_params['orient_track']:
+                    nback = max(0, f - tracking_params['orient_nback'])
+                    xchg = X[f] - X[nback]
+                    ychg = Y[f] - Y[nback]
+                    A[f] = A[f-1]
+                    if np.sqrt(xchg**2 + ychg**2) > tracking_params['orient_distT']:
+                        ang = np.arctan2(ychg, xchg)
+                        ang = ang if ang>0 else 2*np.pi+ang
+                        ang_chg = max(A[f-1],ang) - min(A[f-1],ang)
+                        if not(ang_maxchg <  ang_chg < 2*np.pi-ang_maxchg):
+                            A[f] = ang
         else:
             #if no frame is detected
             f = f-1
-            X = X[:f] #Amend length of X vector
-            Y = Y[:f] #Amend length of Y vector
-            D = D[:f] #Amend length of D vector
+            X = X[:f] 
+            Y = Y[:f] 
+            D = D[:f] 
+            if tracking_params['orient_track'] is True:
+                A = A[:f]
             break   
             
     #release video
@@ -778,6 +795,7 @@ def TrackLocation(video_dict,tracking_params):
      'Frame': np.arange(len(D)),
      'X': X,
      'Y': Y,
+     'A_rad' : A,
      'Distance_px': D
     })
     
@@ -789,6 +807,13 @@ def TrackLocation(video_dict,tracking_params):
        
     return df
 
+def get_distangle(x,y):
+    x = np.finfo(float).eps if (x==0) else x
+    if x>=0:
+        angle = np.arctan(y/x) if (y>=0) else 2*np.pi + np.arctan(y/x)
+    else:
+        angle = np.pi + np.arctan(y/x)
+    return angle
 
 
 
@@ -1686,8 +1711,20 @@ def PlayVideo(video_dict,display_dict,location):
                     cv2.INTER_NEAREST)
             frame = cropframe(frame, video_dict['crop'])
             markposition = (int(location['X'][f]),int(location['Y'][f]))
-            cv2.drawMarker(img=frame,position=markposition,color=255)
+            if 'A_rad' in location.columns:
+                y_chg = int(np.sin(location['A_rad'][f])*25)
+                x_chg = int(np.cos(location['A_rad'][f])*25)
+                frame = cv2.arrowedLine(
+                    img = frame,
+                    pt1 = markposition,
+                    pt2 = (markposition[0]+x_chg, markposition[1]+y_chg),
+                    color = 125,
+                    thickness=1
+                )
+            else: 
+                cv2.drawMarker(img=frame,position=markposition,color=255)     
             display_image(frame,display_dict['fps'],display_dict['resize'])
+            
             #Save video (if desired). 
             if display_dict['save_video']==True:
                 writer.write(frame) 
@@ -2511,4 +2548,14 @@ def check_p_frames(cap, p_prop_allowed=.01, frames_checked=300):
 #bokeh_obj.output_backend = 'svg'
 #export_svgs(bokeh_obj, dpath + '/' + 'Calibration_Frame.svg')
 
-    
+
+# def getslope(img,thresh):
+#     points = np.stack(np.where(img>thresh)).T
+#     [vy,vx,y,x] = cv2.fitLine(points = points,
+#     distType = cv2.DIST_L2,
+#     param = 0,
+#     reps = 0.01,
+#     aeps = 0.01)
+#     slope = vy/vx
+#     radians = np.arctan(slope) if (slope>0) else np.pi + np.arctan(slope)  
+#     return radians
