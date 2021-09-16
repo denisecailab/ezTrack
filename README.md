@@ -6,6 +6,8 @@ This page iPython files that can be used to track the location, motion, and free
 # Please cite ezTrack if you use it in your research:
 Pennington ZT, Dong Z, Feng Y, Vetere LM, Page-Harley L, Shuman T, Cai DJ (2019). ezTrack: An open-source video analysis pipeline for the investigation of animal behavior. Scientific Reports: 9(1): 19979
 
+# THIS BRANCH REQUIRES NEW ENVIRONMENT
+Copy the following command into Terminal/AnacondaPrompt: `conda create -y -n ezTrack -c conda-forge python=3.8 pandas=1.3.2 matplotlib=3.1.1 opencv=4.5.3 jupyter=1.0.0 holoviews=1.14.5 scipy=1.7.1 scikit-learn=0.24.2 bokeh=2.3.3 tqdm` and hit enter.
 
 # Check out the ezTrack wiki
 For instructions on installation and use, go [here](https://github.com/denisecailab/ezTrack/wiki).
