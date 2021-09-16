@@ -45,6 +45,7 @@ import holoviews as hv
 from holoviews import opts
 from holoviews import streams
 from holoviews.streams import Stream, param
+from sklearn.decomposition import PCA
 from io import BytesIO
 from IPython.display import clear_output, Image, display
 hv.notebook_extension('bokeh')
@@ -769,6 +770,17 @@ def TrackLocation(video_dict,tracking_params):
                         ang_chg = max(A[f-1],ang) - min(A[f-1],ang)
                         if not(ang_maxchg <  ang_chg < 2*np.pi-ang_maxchg):
                             A[f] = ang
+                    if tracking_params['orient_bal']:
+                        angle_elong = calc_elong_angle(dif)
+                        if type(angle_elong) is tuple and angle_elong[1]>0.7:
+                            if abs(A[f]-angle_elong[0]) < abs(A[f]-(angle_elong[0]+np.pi)):
+                                if  np.deg2rad(5) < abs(A[f]-angle_elong[0]) < ang_maxchg:
+                                    A[f] = angle_elong[0] 
+                            else:
+                                if np.deg2rad(5) < abs(A[f]-(angle_elong[0]+np.pi)) < ang_maxchg:
+                                    A[f] = angle_elong[0]+np.pi
+                                
+                        
         else:
             #if no frame is detected
             f = f-1
@@ -815,7 +827,17 @@ def get_distangle(x,y):
         angle = np.pi + np.arctan(y/x)
     return angle
 
-
+def calc_elong_angle(img):    
+    indices = np.argwhere(img>0)   
+    if len(indices)>2:
+        pca = PCA(n_components=2)
+        pca.fit(indices)
+        slope = pca.components_[0,0] / pca.components_[0,1] if pca.components_[0,1]!=0 else np.inf
+        angle = np.arctan(slope)
+        angle = angle if angle>0 else angle+np.pi
+        return angle, pca.explained_variance_ratio_[0]
+    else:
+        return None
 
 
 ########################################################################################
@@ -1718,8 +1740,8 @@ def PlayVideo(video_dict,display_dict,location):
                     img = frame,
                     pt1 = markposition,
                     pt2 = (markposition[0]+x_chg, markposition[1]+y_chg),
-                    color = 125,
-                    thickness=1
+                    color = 255,
+                    thickness=2
                 )
             else: 
                 cv2.drawMarker(img=frame,position=markposition,color=255)     
