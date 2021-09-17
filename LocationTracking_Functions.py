@@ -772,13 +772,20 @@ def TrackLocation(video_dict,tracking_params):
                             A[f] = ang
                     if tracking_params['orient_bal']:
                         angle_elong = calc_elong_angle(dif)
-                        if type(angle_elong) is tuple and angle_elong[1]>0.7:
-                            if abs(A[f]-angle_elong[0]) < abs(A[f]-(angle_elong[0]+np.pi)):
-                                if  np.deg2rad(5) < abs(A[f]-angle_elong[0]) < ang_maxchg:
-                                    A[f] = angle_elong[0] 
-                            else:
-                                if np.deg2rad(5) < abs(A[f]-(angle_elong[0]+np.pi)) < ang_maxchg:
-                                    A[f] = angle_elong[0]+np.pi
+                        if type(angle_elong) is tuple and angle_elong[1]>0.75:
+                            ang1 = angle_elong[0]
+                            ang2 =  angle_elong[0]+np.pi
+                            dif1 = abs(A[f]-ang1) if abs(A[f]-ang1)<np.pi else 2*np.pi-abs(A[f]-ang1)
+                            dif2 = abs(A[f]-ang2) if abs(A[f]-ang2)<np.pi else 2*np.pi-abs(A[f]-ang2)
+                            amindif = ang1 if dif1<dif2 else ang2
+                            if amindif < ang_maxchg//2:
+                                A[f] = amindif
+#                             if abs(A[f]-angle_elong[0]) < abs(A[f]-(angle_elong[0]+np.pi)):
+#                                 if  np.deg2rad(5) < abs(A[f]-angle_elong[0]) < ang_maxchg:
+#                                     A[f] = angle_elong[0] 
+#                             else:
+#                                 if np.deg2rad(5) < abs(A[f]-(angle_elong[0]+np.pi)) < ang_maxchg:
+#                                     A[f] = angle_elong[0]+np.pi
                                 
                         
         else:
