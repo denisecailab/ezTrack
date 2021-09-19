@@ -778,14 +778,8 @@ def TrackLocation(video_dict,tracking_params):
                             dif1 = abs(A[f]-ang1) if abs(A[f]-ang1)<np.pi else 2*np.pi-abs(A[f]-ang1)
                             dif2 = abs(A[f]-ang2) if abs(A[f]-ang2)<np.pi else 2*np.pi-abs(A[f]-ang2)
                             amindif = ang1 if dif1<dif2 else ang2
-                            if amindif < ang_maxchg//2:
+                            if amindif < np.deg2rad(30):
                                 A[f] = amindif
-#                             if abs(A[f]-angle_elong[0]) < abs(A[f]-(angle_elong[0]+np.pi)):
-#                                 if  np.deg2rad(5) < abs(A[f]-angle_elong[0]) < ang_maxchg:
-#                                     A[f] = angle_elong[0] 
-#                             else:
-#                                 if np.deg2rad(5) < abs(A[f]-(angle_elong[0]+np.pi)) < ang_maxchg:
-#                                     A[f] = angle_elong[0]+np.pi
                                 
                         
         else:
@@ -797,7 +791,9 @@ def TrackLocation(video_dict,tracking_params):
             if tracking_params['orient_track'] is True:
                 A = A[:f]
             break   
-            
+    
+    #print('adjusted: {}'.format(adjusted))
+    
     #release video
     cap.release()
     time.sleep(.2) #allow printing
@@ -834,9 +830,13 @@ def get_distangle(x,y):
         angle = np.pi + np.arctan(y/x)
     return angle
 
-def calc_elong_angle(img):    
+def calc_elong_angle(img, wtd=False):    
     indices = np.argwhere(img>0)   
     if len(indices)>2:
+        if wtd:
+            nzero = img[np.nonzero(img>0)]
+            indices = [[indices[a].tolist()]*int(nzero[a]) for a in range(len(nzero))]
+            indices = np.array([item for sublist in indices for item in sublist])
         pca = PCA(n_components=2)
         pca.fit(indices)
         slope = pca.components_[0,0] / pca.components_[0,1] if pca.components_[0,1]!=0 else np.inf
