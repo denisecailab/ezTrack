@@ -771,14 +771,14 @@ def TrackLocation(video_dict,tracking_params):
                         if not(ang_maxchg <  ang_chg < 2*np.pi-ang_maxchg):
                             A[f] = ang
                     if tracking_params['orient_bal']:
-                        angle_elong = calc_elong_angle(dif)
-                        if type(angle_elong) is tuple and angle_elong[1]>0.75:
+                        angle_elong = calc_elong_angle(dif, wtd=True)
+                        if type(angle_elong) is tuple and angle_elong[1]>0.7:
                             ang1 = angle_elong[0]
                             ang2 =  angle_elong[0]+np.pi
                             dif1 = abs(A[f]-ang1) if abs(A[f]-ang1)<np.pi else 2*np.pi-abs(A[f]-ang1)
                             dif2 = abs(A[f]-ang2) if abs(A[f]-ang2)<np.pi else 2*np.pi-abs(A[f]-ang2)
-                            amindif = ang1 if dif1<dif2 else ang2
-                            if amindif < np.deg2rad(30):
+                            dif, amindif = (dif1, ang1) if dif1<dif2 else (dif2,ang2)
+                            if dif < np.deg2rad(60):
                                 A[f] = amindif
                                 
                         
@@ -835,6 +835,7 @@ def calc_elong_angle(img, wtd=False):
     if len(indices)>2:
         if wtd:
             nzero = img[np.nonzero(img>0)]
+            nzero = (((nzero/nzero.max())*10)+1).astype('int')
             indices = [[indices[a].tolist()]*int(nzero[a]) for a in range(len(nzero))]
             indices = np.array([item for sublist in indices for item in sublist])
         pca = PCA(n_components=2)
