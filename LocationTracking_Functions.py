@@ -810,9 +810,12 @@ def TrackLocation(video_dict,tracking_params):
      'Frame': np.arange(len(D)),
      'X': X,
      'Y': Y,
-     'A_rad' : A,
      'Distance_px': D
     })
+    
+    #add orientation
+    if tracking_params['orient_track']:
+        df['A_rad'] = A
     
     #add region of interest info
     df = ROI_Location(video_dict, df) 
