@@ -784,6 +784,10 @@ def TrackLocation(video_dict,tracking_params):
     
     #add region of interest info
     df = ROI_Location(video_dict, df) 
+    if video_dict['region_names'] is not None:
+        print('Defining transitions...')
+        df['ROI_location'] = ROI_linearize(df[video_dict['region_names']])
+        df['ROI_transition'] = ROI_transitions(df['ROI_location'])
     
     #update scale, if known
     df = ScaleDistance(video_dict, df=df, column='Distance_px')
@@ -1170,6 +1174,79 @@ def ROI_Location(video_dict, location):
     location['ROI_coordinates']=str(video_dict['roi_stream'].data)
     
     return location
+
+
+
+
+
+########################################################################################        
+
+def ROI_linearize(rois, null_name = 'non_roi'):
+    
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Creates array defining ROI as string for each frame
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        rois:: [pd.DataFrame]
+            Pandas dataframe where each column corresponds to an ROI, with boolean values
+            defining if animal is in said roi.
+        null_name:: [string]
+            Name used when animals is not in any defined roi.
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        rois['ROI_location']:: [pd.Series]
+            pd.Series defining ROI as string for each frame
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
+    region_names = rois.columns.values
+    rois['ROI_location'] = null_name
+    for region in region_names:
+        rois['ROI_location'][rois[region]] = rois['ROI_location'][rois[region]].apply(
+            lambda x: '_'.join([x, region]) if x!=null_name else region
+        )
+    return rois['ROI_location']
+
+
+
+
+
+
+########################################################################################        
+
+def ROI_transitions(regions, include_first=False):
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Creates boolean array defining where transitions between each ROI occur.
+    
+    -------------------------------------------------------------------------------------
+    Args:
+        regions:: [Pandas Series]
+            Pandas Series defining ROI as string for each frame
+        include_first:: [string]
+            Whether to count first frame as transition
+    
+    -------------------------------------------------------------------------------------
+    Returns:
+        transitions:: [Boolean array]
+            pd.Series defining where transitions between ROIs occur.
+    
+    -------------------------------------------------------------------------------------
+    Notes:
+    
+    """
+    regions_offset = np.append(regions[0], regions[0:-1])
+    transitions = regions!=regions_offset
+    if include_first:
+        transitions[0] = True
+    return transitions
 
 
 
