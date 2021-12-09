@@ -1,3 +1,30 @@
+"""
+
+LIST OF CLASSES/FUNCTIONS
+
+Video (Class)
+    FUNCTIONS:
+    init
+    scale_set
+    start
+    stop
+    release
+    display
+    get_frames
+    ref_create
+    locate
+    crop_define
+    crop_cropframe
+    mask_define
+    roi_define
+    params_save
+    params_load
+
+hv_baseimage
+
+"""
+
+
 import os
 import sys
 import cv2
@@ -17,10 +44,166 @@ hv.notebook_extension('bokeh')
 
 
 
+
 class Video():
+    
+    """ 
+    -------------------------------------------------------------------------------------
+    
+    Base container for holding video stream and all tracking paramaters
+
+    -------------------------------------------------------------------------------------
+    Args:
+            src:: [int]
+                USB input on camera.
+
+            scale:: [float, 0<x<=1]
+                Downsampling of each frame, such that 0.3 would result in 30% input size. 
+                Uses OpenCV INTER_NEAREST method. If no downsampling can be kept = None.
+
+            buffer:: [unsigned integer]
+                Size of Video.fq, the buffer used to synchronize frames in main tracking 
+                thread with outside functions. 
+                
+    -------------------------------------------------------------------------------------
+    Attributes:
+    
+        stream:: [cv2.VideoCapture]
+            OpenCV VideoCapture class instance for video.
+            
+        started:: [boolean]
+            Indicates if frames are currently being retrieved. Note that this is distinct
+            from Video.track, which indicates whether tracking is ongoing.
+            
+        frame:: [array]
+            The most recently captured frame. Note that because this is continuously
+            updated it is safer to copy than access directly.
+            
+        ref:: [array]
+            Reference frame composed of field of view without animal that is necessary for 
+            tracking. See Video.ref_create for details.  Same shape as Video.frame.
+            
+        fq:: [queue.queue]
+            Queue of video frames.  Currently only used for reference creation
+            (Video.ref_create) and saving (see class Saver).
+            
+        params_loaded:: [bool]
+            Indicates whether parameters have been loaded from a file using
+            Video.params_load. 
+            
+        crp_bnds:: [None, holoviews.streams.BoxEdit or dictionary]
+            Defines cropping bounds of frame, after scaling. Set to None if no cropping 
+            is to be performed.  Can be drawn in Jupyter Notebook using Video.crop_define,
+            subsequently saved using Video.params_save, and then loaded using
+            Video.params_load.  To set this manually Video.params_loaded will also need to 
+            be set to True.  When defined manualy, Video.crp_bnds should be a dictionary 
+            with the following keys: ['x0', 'x1', 'y0', 'y1'], and each value should be a 
+            list of length 1.  
+            For example "Video.crp_bnds = dict(x0=[5], x1=[500], y0=[10], y1=[300])"
+            
+        mask:: [bool array]
+            Boolean numpy array identifying regions to exclude from tracking.  Should 
+            be same dimensions as Video.frame.
+            
+        roi_names:: [list]
+            List of region of interest names.
+            
+        roi_masks:: [dict]
+            Dictionary with Video.roi_names as keys, with corresponding boolean areas of
+            shape Video.frame as values.
+            
+        fps:: [float]
+            Video acquisition rate.
+            
+        scale:: [0<x<=1]
+            Downsampling of each frame, such that 0.3 would result in 30% 
+            input size. Uses OpenCV INTER_NEAREST method. 
+            Should be set either when initially defining Video instance, or by using the
+            Video.set_scale function.     
+            
+        scale_orig:: [tuple]
+            Dimensions of original video frame, before downsampling: (width, height)
+
+        scale_w:: [int]
+            Width of frame, including any applied downsampling.
+            
+        scale_h:: [type]
+            Height of frame, including any applied downsampling.
+            
+        track:: [bool]
+            Set to True to initiate tracking. Video.started should be True before
+            tracking is begun.
+            
+        track_yx:: [tuple]
+            Indices of center of mass as tuple in the form: (y,x).
+            
+        track_roi:: [dictionary]
+            Dictionary with Video.roi_names as keys, with corresponding boolean values
+            indicating if animal is in each ROI.
+            
+        track_thresh:: [float between 0-100]
+            Percentile of difference values below which are set to 0. After calculating 
+            pixel-wise difference between passed frame and reference frame, these values 
+            are thresholded to make subsequent defining of center of mass more reliable. 
+            
+        track_method:: [string]
+            Set to 'abs', 'light', or 'dark'. If 'abs', absolute difference, between 
+            reference and current frame is taken, and thus the background of the frame 
+            doesn't matter. 'light' specifies thatthe animal is lighter than the background.
+            'dark' specifies that the animal is darker than the background. 
+        
+        track_window_use: [bool]
+            Will window surrounding prior location be imposed?  Allows changes in area 
+            surrounding animal's location on previous frame to be more heavily influential
+            in determining animal's current location. After finding pixel-wise difference 
+            between passed frame and reference frame, difference values outside square window
+            of prior location will be multiplied by (1 - window_weight), reducing their 
+            overall influence. [bool]
+        
+        track_window_sz:: [unsigned integer]
+            If `use_window=True`, the length of one side of square window, in pixels.
+            
+        track_window_wt:: [float between 0-1]
+            0-1 scale for window, if used, where 1 is maximal weight of window surrounding 
+            prior locaiton. 
+                                  
+        track_rmvwire:: [bool]
+            True/False, indicating whether to use wire removal function. 
+            
+        track_rmvwire_krn:: [unsigned integer]
+            Size of kernel used for morphological opening to remove wire.
+
+    -------------------------------------------------------------------------------------
+    
+    """
 
     
     def __init__(self, src=0, scale=None, buffer=10):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Video class initialization
+
+        -------------------------------------------------------------------------------------
+        Args:
+            src:: [int]
+                USB input on camera.
+
+            scale:: [float, 0<x<=1]
+                Downsampling of each frame, such that 0.3 would result in 30% input size. 
+                Uses OpenCV INTER_NEAREST method. If no downsampling can be kept = None.
+
+            buffer:: [unsigned integer]
+                Size of Video.fq, the buffer used to synchronize frames in main tracking 
+                thread with outside functions. 
+
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+        """
+        
         self.stream = cv2.VideoCapture(src)
         self.started = False
         self.frame = None
@@ -50,31 +233,108 @@ class Video():
 
 
     def scale_set(self, scale=1):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Allows for setting downsampling scale after defining Video instance.  Should be 
+        done prior to generating reference from and beginning tracking.
+
+        -------------------------------------------------------------------------------------
+        Args:
+            scale:: [float, 0<x<=1]
+                Downsampling of each frame, such that 0.3 would result in 30% input size. 
+                Uses OpenCV INTER_NEAREST method. If no downsampling can be kept = None.
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+        """
+        
         self.scale = scale
         self.w = int(self.scale_orig[0]*self.scale) 
         self.h = int(self.scale_orig[1]*self.scale) 
 
         
         
-    def start(self): 
+    def start(self):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Initializes continuous retrieval of frames in thread. 
+
+        -------------------------------------------------------------------------------------
+        Notes:
+   
+            This does not start tracking (set with Video.track)
+
+        """
+        
         self.started = True
         Thread(target=self.get_frames, args=()).start()    
     
     
     
     def stop(self):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Stops thread in control of continuous retrieval of frames.  
+
+        -------------------------------------------------------------------------------------
+        Notes:
+        
+            Counter to Video.release, this does not release the CV2.VideoCapture instance. 
+            This allows the user to stop and and then re-start tracking, if desired.
+
+        """
+        
         self.started = False
         
         
         
     def release(self):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Stops thread in control of continuous retrieval of frames and releases camera.
+
+        -------------------------------------------------------------------------------------
+        Notes:
+        
+            See Video.stop if you would like to stop retrieving frames wihtout releasing 
+            camera.
+
+        """
+        
         self.started = False
         time.sleep(.1)
         self.stream.release()  
   
 
 
-    def display(self, display=True, show_xy=False):
+    def display(self, show_xy=False):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        OpenCV window allowing display of tracking.  'Q' can be pressed to exit
+
+        -------------------------------------------------------------------------------------
+        Args:
+            show_xy:: [bool]
+                Dictates whether position of animal should be presented, if tracking.  Can
+                be safely kept to True when not tracking.
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+        """
+        
+        display = True
         while display==True:
             frame = self.frame.copy()
             if show_xy==True and self.track_yx is not None:
@@ -92,6 +352,18 @@ class Video():
         
         
     def get_frames(self):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Function executed in thread under Video.start to iteratively retrieve frames and 
+        track animal (if Video.track is True).
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+        """
+        
         while self.started:
             
             #get latest frame
@@ -126,6 +398,28 @@ class Video():
             
             
     def ref_create(self, print_sts=True, secs=5):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Generates reference frame
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
+        
         samples = int(secs*self.fps)
         self.fq.queue.clear()
         for smpl in np.arange(samples):
@@ -142,6 +436,28 @@ class Video():
 
 
     def locate(self,frame):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Description
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
+        
         if self.track_method == 'abs':
             dif = np.absolute(frame-self.ref)
         elif self.track_method == 'light':
@@ -179,6 +495,28 @@ class Video():
 
 
     def crop_define(self):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Description
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
+        
         image = hv_baseimage(
             frame = self.frame,
             text = "Crop as Desired"
@@ -191,7 +529,29 @@ class Video():
  
 
 
-    def crop_cropframe(self, frame):   
+    def crop_cropframe(self, frame):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Description
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
+        
         if self.params_loaded:
             try:
                 Xs = [self.crop_bnds['x0'][0], self.crop_bnds['x1'][0]]
@@ -213,7 +573,28 @@ class Video():
  
 
 
-    def mask_define(self):
+    def mask_define(self):    
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Description
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
         
         #Make base image on which to draw
         image = hv_baseimage(
@@ -248,7 +629,28 @@ class Video():
 
     
     
-    def roi_define(self, names = None):
+    def roi_define(self, names = None): 
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Description
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
     
         self.roi_names = names
         self.track_roi = {x : None for x in self.roi_names}
@@ -289,7 +691,29 @@ class Video():
         
     
     
-    def params_save(self, file=None):     
+    def params_save(self, file=None): 
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Description
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
+        
         vid_dict = {
             'roi_masks' : self.roi_masks,
             'crop_bnds' : None if self.crop_bnds is None else self.crop_bnds.data,
@@ -302,6 +726,28 @@ class Video():
     
     
     def params_load(self, file=None):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Description
+
+        -------------------------------------------------------------------------------------
+        Args:
+            item:: [type]
+                description 
+
+        -------------------------------------------------------------------------------------
+        Returns:
+            item:: [type]
+                description   
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+
+        """
+        
         with open(file, 'rb') as pickle_file:
             vid_dict = pickle.load(pickle_file)   
         self.roi_masks = vid_dict['roi_masks']
@@ -315,7 +761,29 @@ class Video():
 
         
 
-def hv_baseimage(frame, text=None):
+def hv_baseimage(frame, text=None):  
+    
+    """ 
+    -------------------------------------------------------------------------------------
+
+    Description
+
+    -------------------------------------------------------------------------------------
+    Args:
+        item:: [type]
+            description 
+
+    -------------------------------------------------------------------------------------
+    Returns:
+        item:: [type]
+            description   
+
+    -------------------------------------------------------------------------------------
+    Notes:
+
+
+    """
+        
     image = hv.Image((
             np.arange(frame.shape[1]),
             np.arange(frame.shape[0]),
