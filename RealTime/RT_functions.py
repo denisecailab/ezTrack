@@ -115,7 +115,8 @@ class Video():
                     if self.roi_masks is not None:
                         for roi in self.roi_masks.keys():
                             self.track_roi[roi] = self.roi_masks[roi][
-                                int(self.track_yx[0]), int(self.track_yx[1])]
+                                int(self.track_yx[0]), int(self.track_yx[1])
+                            ]
 
                 #add frame to video queue
                 if self.fq.full():
@@ -124,7 +125,7 @@ class Video():
 
             
             
-    def ref_create(self, secs=5):
+    def ref_create(self, print_sts=True, secs=5):
         samples = int(secs*self.fps)
         self.fq.queue.clear()
         for smpl in np.arange(samples):
@@ -133,7 +134,8 @@ class Video():
                 mean = mean*(smpl/(smpl+1)) + frame*(1/(smpl+1))
             else:
                 mean =self.frame
-            print((smpl+1)/samples*secs)
+            if print_sts:
+                print((smpl+1)/samples*secs)
             clear_output(wait=True)
         self.ref = mean
   
