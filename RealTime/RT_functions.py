@@ -76,7 +76,7 @@ class Video():
 
     def display(self, display=True, show_xy=False):
         while display==True:
-            frame = self.frame
+            frame = self.frame.copy()
             if show_xy==True and self.track_yx is not None:
                 markposition = (
                         int(self.track_yx[1]),
