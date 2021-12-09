@@ -96,30 +96,31 @@ class Video():
             
             #get latest frame
             ret, frame = self.stream.read() 
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
-            #scale, crop, and mask frame
-            if self.scale != 1:
-                frame = cv2.resize(
-                    frame,
-                    (self.scale_w, self.scale_h),
-                    cv2.INTER_NEAREST)
-            if self.crop_bnds is not None:
-                frame = self.crop_cropframe(frame)
-            self.frame = frame
-            
-            #track locatiotn
-            if self.track:
-                self.track_yx = self.locate(self.frame)
-                if self.roi_masks is not None:
-                    for roi in self.roi_masks.keys():
-                        self.track_roi[roi] = self.roi_masks[roi][
-                            int(self.track_yx[0]), int(self.track_yx[1])]
+            if ret == True:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            #add frame to video queue
-            if self.fq.full():
-                self.fq.queue.popleft()
-            self.fq.put(self.frame)             
+                #scale, crop, and mask frame
+                if self.scale != 1:
+                    frame = cv2.resize(
+                        frame,
+                        (self.scale_w, self.scale_h),
+                        cv2.INTER_NEAREST)
+                if self.crop_bnds is not None:
+                    frame = self.crop_cropframe(frame)
+                self.frame = frame
+
+                #track locatiotn
+                if self.track:
+                    self.track_yx = self.locate(self.frame)
+                    if self.roi_masks is not None:
+                        for roi in self.roi_masks.keys():
+                            self.track_roi[roi] = self.roi_masks[roi][
+                                int(self.track_yx[0]), int(self.track_yx[1])]
+
+                #add frame to video queue
+                if self.fq.full():
+                    self.fq.queue.popleft()
+                self.fq.put(self.frame)             
 
             
             
