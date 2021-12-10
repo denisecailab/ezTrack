@@ -53,131 +53,9 @@ class Video():
     Base container for holding video stream and all tracking paramaters
 
     -------------------------------------------------------------------------------------
-    Args:
-            src:: [int]
-                USB input on camera.
 
-            scale:: [float, 0<x<=1]
-                Downsampling of each frame, such that 0.3 would result in 30% input size. 
-                Uses OpenCV INTER_NEAREST method. If no downsampling can be kept = None.
-
-            buffer:: [unsigned integer]
-                Size of Video.fq, the buffer used to synchronize frames in main tracking 
-                thread with outside functions. 
-                
-    -------------------------------------------------------------------------------------
-    Attributes:
-    
-        stream:: [cv2.VideoCapture]
-            OpenCV VideoCapture class instance for video.
-            
-        started:: [boolean]
-            Indicates if frames are currently being retrieved. Note that this is distinct
-            from Video.track, which indicates whether tracking is ongoing.
-            
-        frame:: [array]
-            The most recently captured frame. Note that because this is continuously
-            updated it is safer to copy than access directly.
-            
-        ref:: [array]
-            Reference frame composed of field of view without animal that is necessary for 
-            tracking. See Video.ref_create for details.  Same shape as Video.frame.
-            
-        fq:: [queue.queue]
-            Queue of video frames.  Currently only used for reference creation
-            (Video.ref_create) and saving (see class Saver).
-            
-        params_loaded:: [bool]
-            Indicates whether parameters have been loaded from a file using
-            Video.params_load. 
-            
-        crp_bnds:: [None, holoviews.streams.BoxEdit or dictionary]
-            Defines cropping bounds of frame, after scaling. Set to None if no cropping 
-            is to be performed.  Can be drawn in Jupyter Notebook using Video.crop_define,
-            subsequently saved using Video.params_save, and then loaded using
-            Video.params_load.  To set this manually Video.params_loaded will also need to 
-            be set to True.  When defined manualy, Video.crp_bnds should be a dictionary 
-            with the following keys: ['x0', 'x1', 'y0', 'y1'], and each value should be a 
-            list of length 1.  
-            For example "Video.crp_bnds = dict(x0=[5], x1=[500], y0=[10], y1=[300])"
-            
-        mask:: [bool array]
-            Boolean numpy array identifying regions to exclude from tracking.  Should 
-            be same dimensions as Video.frame.
-            
-        roi_names:: [list]
-            List of region of interest names.
-            
-        roi_masks:: [dict]
-            Dictionary with Video.roi_names as keys, with corresponding boolean areas of
-            shape Video.frame as values.
-            
-        fps:: [float]
-            Video acquisition rate.
-            
-        scale:: [0<x<=1]
-            Downsampling of each frame, such that 0.3 would result in 30% 
-            input size. Uses OpenCV INTER_NEAREST method. 
-            Should be set either when initially defining Video instance, or by using the
-            Video.set_scale function.     
-            
-        scale_orig:: [tuple]
-            Dimensions of original video frame, before downsampling: (width, height)
-
-        scale_w:: [int]
-            Width of frame, including any applied downsampling.
-            
-        scale_h:: [type]
-            Height of frame, including any applied downsampling.
-            
-        track:: [bool]
-            Set to True to initiate tracking. Video.started should be True before
-            tracking is begun.
-            
-        track_yx:: [tuple]
-            Indices of center of mass as tuple in the form: (y,x).
-            
-        track_roi:: [dictionary]
-            Dictionary with Video.roi_names as keys, with corresponding boolean values
-            indicating if animal is in each ROI.
-            
-        track_thresh:: [float between 0-100]
-            Percentile of difference values below which are set to 0. After calculating 
-            pixel-wise difference between passed frame and reference frame, these values 
-            are thresholded to make subsequent defining of center of mass more reliable. 
-            
-        track_method:: [string]
-            Set to 'abs', 'light', or 'dark'. If 'abs', absolute difference, between 
-            reference and current frame is taken, and thus the background of the frame 
-            doesn't matter. 'light' specifies thatthe animal is lighter than the background.
-            'dark' specifies that the animal is darker than the background. 
-        
-        track_window_use: [bool]
-            Will window surrounding prior location be imposed?  Allows changes in area 
-            surrounding animal's location on previous frame to be more heavily influential
-            in determining animal's current location. After finding pixel-wise difference 
-            between passed frame and reference frame, difference values outside square window
-            of prior location will be multiplied by (1 - window_weight), reducing their 
-            overall influence. [bool]
-        
-        track_window_sz:: [unsigned integer]
-            If `use_window=True`, the length of one side of square window, in pixels.
-            
-        track_window_wt:: [float between 0-1]
-            0-1 scale for window, if used, where 1 is maximal weight of window surrounding 
-            prior locaiton. 
-                                  
-        track_rmvwire:: [bool]
-            True/False, indicating whether to use wire removal function. 
-            
-        track_rmvwire_krn:: [unsigned integer]
-            Size of kernel used for morphological opening to remove wire.
-
-    -------------------------------------------------------------------------------------
-    
     """
 
-    
     def __init__(self, src=0, scale=None, buffer=10):
         
         """ 
@@ -197,7 +75,114 @@ class Video():
             buffer:: [unsigned integer]
                 Size of Video.fq, the buffer used to synchronize frames in main tracking 
                 thread with outside functions. 
+                
+        -------------------------------------------------------------------------------------        
+        Attributes:
 
+            stream:: [cv2.VideoCapture]
+                OpenCV VideoCapture class instance for video.
+
+            started:: [boolean]
+                Indicates if frames are currently being retrieved. Note that this is distinct
+                from Video.track, which indicates whether tracking is ongoing.
+
+            frame:: [array]
+                The most recently captured frame. Note that because this is continuously
+                updated it is safer to copy than access directly.
+
+            ref:: [array]
+                Reference frame composed of field of view without animal that is necessary for 
+                tracking. See Video.ref_create for details.  Same shape as Video.frame.
+
+            fq:: [queue.queue]
+                Queue of video frames.  Currently only used for reference creation
+                (Video.ref_create) and saving (see class Saver).
+
+            params_loaded:: [bool]
+                Indicates whether parameters have been loaded from a file using
+                Video.params_load. 
+
+            crp_bnds:: [None, holoviews.streams.BoxEdit or dictionary]
+                Defines cropping bounds of frame, after scaling. Set to None if no cropping 
+                is to be performed.  Can be drawn in Jupyter Notebook using Video.crop_define,
+                subsequently saved using Video.params_save, and then loaded using
+                Video.params_load.  To set this manually Video.params_loaded will also need to 
+                be set to True.  When defined manualy, Video.crp_bnds should be a dictionary 
+                with the following keys: ['x0', 'x1', 'y0', 'y1'], and each value should be a 
+                list of length 1.  
+                For example "Video.crp_bnds = dict(x0=[5], x1=[500], y0=[10], y1=[300])"
+
+            mask:: [bool array]
+                Boolean numpy array identifying regions to exclude from tracking.  Should 
+                be same dimensions as Video.frame.
+
+            roi_names:: [list]
+                List of region of interest names.
+
+            roi_masks:: [dict]
+                Dictionary with Video.roi_names as keys, with corresponding boolean areas of
+                shape Video.frame as values.
+
+            fps:: [float]
+                Video acquisition rate.
+
+            scale:: [0<x<=1]
+                Downsampling of each frame, such that 0.3 would result in 30% 
+                input size. Uses OpenCV INTER_NEAREST method. 
+                Should be set either when initially defining Video instance, or by using the
+                Video.set_scale function.     
+
+            scale_orig:: [tuple]
+                Dimensions of original video frame, before downsampling: (width, height)
+
+            scale_w:: [int]
+                Width of frame, including any applied downsampling.
+
+            scale_h:: [type]
+                Height of frame, including any applied downsampling.
+
+            track:: [bool]
+                Set to True to initiate tracking. Video.started should be True before
+                tracking is begun.
+
+            track_yx:: [tuple]
+                Indices of center of mass as tuple in the form: (y,x).
+
+            track_roi:: [dictionary]
+                Dictionary with Video.roi_names as keys, with corresponding boolean values
+                indicating if animal is in each ROI.
+
+            track_thresh:: [float between 0-100]
+                Percentile of difference values below which are set to 0. After calculating 
+                pixel-wise difference between passed frame and reference frame, these values 
+                are thresholded to make subsequent defining of center of mass more reliable. 
+
+            track_method:: [string]
+                Set to 'abs', 'light', or 'dark'. If 'abs', absolute difference, between 
+                reference and current frame is taken, and thus the background of the frame 
+                doesn't matter. 'light' specifies thatthe animal is lighter than the background.
+                'dark' specifies that the animal is darker than the background. 
+
+            track_window_use: [bool]
+                Will window surrounding prior location be imposed?  Allows changes in area 
+                surrounding animal's location on previous frame to be more heavily influential
+                in determining animal's current location. After finding pixel-wise difference 
+                between passed frame and reference frame, difference values outside square window
+                of prior location will be multiplied by (1 - window_weight), reducing their 
+                overall influence. [bool]
+
+            track_window_sz:: [unsigned integer]
+                If `use_window=True`, the length of one side of square window, in pixels.
+
+            track_window_wt:: [float between 0-1]
+                0-1 scale for window, if used, where 1 is maximal weight of window surrounding 
+                prior locaiton. 
+
+            track_rmvwire:: [bool]
+                True/False, indicating whether to use wire removal function. 
+
+            track_rmvwire_krn:: [unsigned integer]
+                Size of kernel used for morphological opening to remove wire.
 
         -------------------------------------------------------------------------------------
         Notes:
