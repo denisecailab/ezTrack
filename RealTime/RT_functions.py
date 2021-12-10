@@ -593,7 +593,7 @@ class Video():
         self.mask['stream'] = streams.PolyDraw(source=poly, drag=True, show_vertices=True)
         poly.opts(fill_alpha=0.3, active_tools=['poly_draw'])
         points = hv.Points([]).opts(active_tools=['point_draw'], color='red',size=10)
-        pointDraw_stream = streams.PointDraw(source=points,num_objects=20) 
+        pointDraw_stream = streams.PointDraw(source=points) 
         def make_mask(data, mask):
             try:
                 x_ls, y_ls = data['xs'], data['ys'] 
@@ -606,7 +606,7 @@ class Video():
                     y = np.array(mask['stream'].data['ys'][submask]) #y coordinates
                     xy = np.column_stack((x,y)).astype('uint64') #xy coordinate pairs
                     cv2.fillPoly(mask['mask'], pts =[xy], color=1) #fill polygon  
-                    mask['mask'] = mask['mask'].astype('bool')
+                mask['mask'] = mask['mask'].astype('bool')
             return hv.Labels((0,0,""))
         make_mask_ptl = fct.partial(make_mask, mask=self.mask)  
         dmap = hv.DynamicMap(make_mask_ptl, streams=[self.mask['stream']])    
