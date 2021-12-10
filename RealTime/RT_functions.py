@@ -387,17 +387,14 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Generates reference frame
+        Generates reference frame from ongoing collection of frames.
 
         -------------------------------------------------------------------------------------
         Args:
-            item:: [type]
-                description 
-
-        -------------------------------------------------------------------------------------
-        Returns:
-            item:: [type]
-                description   
+            print_sts:: [bool]
+                Option to print progess of reference creation
+            secs:: [numeric]
+                Number of seconds to generate reference frame from.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -425,17 +422,12 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Description
+        Defines position of animal within frame.
 
         -------------------------------------------------------------------------------------
         Args:
-            item:: [type]
-                description 
-
-        -------------------------------------------------------------------------------------
-        Returns:
-            item:: [type]
-                description   
+            frame:: [array]
+                The frame in which to track the animal.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -484,21 +476,20 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Description
+        Holoviews tool allowing one to select cropping bounds in interactive manner using
+        box selection tool.
 
         -------------------------------------------------------------------------------------
-        Args:
-            item:: [type]
-                description 
 
-        -------------------------------------------------------------------------------------
         Returns:
-            item:: [type]
-                description   
+            item:: [holoviews.Image]
+                holoviews.Image displaying most recent frame.  Use box selection tool to
+                select cropping bounds.
 
         -------------------------------------------------------------------------------------
         Notes:
-
+        
+            Can only be used within Jupyter.
 
         """
         
@@ -519,17 +510,17 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Description
+        Crops the passed frame using cropping parameters in Video.crop_bnds
 
         -------------------------------------------------------------------------------------
         Args:
-            item:: [type]
-                description 
+            frame:: [array]
+                Input frame 
 
         -------------------------------------------------------------------------------------
         Returns:
-            item:: [type]
-                description   
+            frame:: [array]
+                Cropped output frame   
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -563,21 +554,20 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Description
-
-        -------------------------------------------------------------------------------------
-        Args:
-            item:: [type]
-                description 
+        Holoviews tool allowing one to select multiple regions of field of view to be 
+        ignored using point selection tool.  Double-click to start/stop region, single-click
+        to add vertex to existing region
 
         -------------------------------------------------------------------------------------
         Returns:
-            item:: [type]
-                description   
+            item:: [holoviews.Image]
+                holoviews.Image displaying most recent frame.  Use point selection tool to
+                define regions to be ignored.
 
         -------------------------------------------------------------------------------------
         Notes:
-
+            
+            Can only be used within Jupyter.
 
         """
         
@@ -619,21 +609,24 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Description
+        Holoviews tool allowing one to select regions of interest using point selection tool.  
+        Double-click to start/stop region, single-click to add vertex to existing region.
 
         -------------------------------------------------------------------------------------
         Args:
-            item:: [type]
-                description 
-
+            names:: [list]
+                Names of regions of interest.
+                
         -------------------------------------------------------------------------------------
         Returns:
-            item:: [type]
-                description   
+            item:: [holoviews.Image]
+                holoviews.Image displaying most recent frame.  Use point selection tool to
+                define regions of interest.
 
         -------------------------------------------------------------------------------------
         Notes:
 
+            Can only be used within Jupyter.
 
         """
     
@@ -681,17 +674,13 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Description
-
+        Saves Video.roi_masks, Video.crop_bnds, Video.mask, and Video.scale within a pickle
+        file that can be subsequently loaded and run using Video.params_load.
+        
         -------------------------------------------------------------------------------------
         Args:
-            item:: [type]
-                description 
-
-        -------------------------------------------------------------------------------------
-        Returns:
-            item:: [type]
-                description   
+            file:: [string]
+                Filename of item to be saved.  Must have '.pickle' extension. 
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -715,17 +704,13 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Description
-
+        Loads Video.roi_masks, Video.crop_bnds, Video.mask, and Video.scale from a pickle
+        file and adds them to Video object. 
+        
         -------------------------------------------------------------------------------------
         Args:
-            item:: [type]
-                description 
-
-        -------------------------------------------------------------------------------------
-        Returns:
-            item:: [type]
-                description   
+            file:: [string]
+                Filename of item to be saved.  Must have '.pickle' extension. 
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -751,17 +736,17 @@ def hv_baseimage(frame, text=None):
     """ 
     -------------------------------------------------------------------------------------
 
-    Description
+    Base holoviews image to subsequently manipulate
 
     -------------------------------------------------------------------------------------
     Args:
-        item:: [type]
-            description 
+        frame:: [array]
+            Frame to use.
 
     -------------------------------------------------------------------------------------
     Returns:
-        item:: [type]
-            description   
+        image:: [hv.Image]
+            holoviews.Image which can then be modified/added to.  
 
     -------------------------------------------------------------------------------------
     Notes:
