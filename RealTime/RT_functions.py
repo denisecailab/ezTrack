@@ -3,22 +3,6 @@
 LIST OF CLASSES/FUNCTIONS
 
 Video (Class)
-    FUNCTIONS:
-    init
-    scale_set
-    start
-    stop
-    release
-    display
-    get_frames
-    ref_create
-    locate
-    crop_define
-    crop_cropframe
-    mask_define
-    roi_define
-    params_save
-    params_load
 
 hv_baseimage
 
@@ -53,7 +37,54 @@ class Video():
     Base container for holding video stream and all tracking paramaters
 
     -------------------------------------------------------------------------------------
-
+    
+    Methods:
+    
+        - init
+        - scale_set
+        - start
+        - stop
+        - release
+        - display
+        - get_frames
+        - ref_create
+        - locate
+        - crop_define
+        - crop_cropframe
+        - mask_define
+        - roi_define
+        - params_save
+        - params_load
+    
+    Attributes (see __init__ for details):
+    
+        - stream
+        - started
+        - frame
+        - ref
+        - dif
+        - fq
+        - params_loaded
+        - crp_bnds
+        - mask
+        - roi_names
+        - roi_masks
+        - fps
+        - scale
+        - scale_orig
+        - scale_w
+        - scale_h
+        - track
+        - track_yx
+        - track_roi
+        - track_thresh
+        - track_method
+        - track_window_use
+        - track_window_sz
+        - track_window_wt
+        - track_rmvwire
+        - track_rmvwire_krn
+    
     """
 
     def __init__(self, src=0, scale=None, buffer=10):
