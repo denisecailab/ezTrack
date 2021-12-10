@@ -93,6 +93,9 @@ class Video():
             ref:: [array]
                 Reference frame composed of field of view without animal that is necessary for 
                 tracking. See Video.ref_create for details.  Same shape as Video.frame.
+                
+            dif:: [array]
+                The features of the most recently captured frame used for processing.
 
             fq:: [queue.queue]
                 Queue of video frames.  Currently only used for reference creation
@@ -193,6 +196,7 @@ class Video():
         self.started = False
         self.frame = None
         self.ref = None
+        self.dif = None
         self.fq = queue.Queue(buffer)
         self.params_loaded = False
         self.crop_bnds = None
@@ -301,7 +305,7 @@ class Video():
   
 
 
-    def display(self, show_xy=False):
+    def display(self, show_xy=True, show_dif = True):
         
         """ 
         -------------------------------------------------------------------------------------
@@ -313,6 +317,10 @@ class Video():
             show_xy:: [bool]
                 Dictates whether position of animal should be presented, if tracking.  Can
                 be safely kept to True when not tracking.
+            
+            show_dif:: [bool]
+                Option to display second window where features used for tracking are
+                highlighted.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -328,6 +336,8 @@ class Video():
                         int(self.track_yx[0]))
                 cv2.drawMarker(img=frame,position=markposition,color=255)
             cv2.imshow('Video', frame)
+            if show_dif:
+                cv2.imshow('Difference', self.dif.copy().astype('uint8'))
             #wait for 'q' key response to exit
             if (cv2.waitKey(int(1000/self.fps) & 0xFF) == 113):
                 display = False       
@@ -466,7 +476,8 @@ class Video():
             dif = dif*dif_weights
         
         dif[dif<np.percentile(dif,self.track_thresh)]=0
-        com = center_of_mass(dif)
+        self.dif = dif.copy()
+        com = center_of_mass(self.dif)
         return com
   
 
