@@ -61,6 +61,7 @@ class Video():
         - stream
         - started
         - frame
+        - frame_time
         - ref
         - dif
         - fq
@@ -120,6 +121,9 @@ class Video():
             frame:: [array]
                 The most recently captured frame. Note that because this is continuously
                 updated it is safer to copy than access directly.
+                
+            frame_time:: [float64]
+                Time frame was acquired by OpenCV.
 
             ref:: [array]
                 Reference frame composed of field of view without animal that is necessary for 
@@ -226,6 +230,7 @@ class Video():
         self.stream = cv2.VideoCapture(src)
         self.started = False
         self.frame = None
+        self.frame_time = None
         self.ref = None
         self.dif = None
         self.fq = queue.Queue(buffer)
@@ -395,6 +400,7 @@ class Video():
             #get latest frame
             ret, frame = self.stream.read() 
             if ret == True:
+                self.frame_time = time.time()
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
                 #scale, crop, and mask frame
@@ -818,15 +824,18 @@ def hv_baseimage(frame, text=None):
 #
 class Saver():
 
-    def __init__(self, vid, dpath, bufsize=300):
-        self.vpath = os.path.join(dpath,'vid.hd5f')
+    def __init__(self, vid, dpath, filename='vid.hd5f', bufsize=300):
+        self.vpath = os.path.join(dpath, filename)
         self.scale = vid.scale
         self.fq = vid.fq
         self.bufsize = bufsize
-        self.buffer = np.zeros(
-            (self.scale.h,self.scale.w,self.bufsize)
-            ).astype('uint8')
-        self.bufqueue = multiprocessing.Queue()
+        self.bufwait = bufsize * vid.fps
+        self.buffer = np.zeros((
+                self.scale.h,
+                self.scale.w,
+                self.bufsize
+            )).astype('uint8')
+        self.bufqueue_f = multiprocessing.Queue()
         self.vidstartlen = self.bufsize*10
         self.createfile()
         self.started = False
@@ -836,11 +845,15 @@ class Saver():
         self.started = True
         self.fq.queue.clear()
         multiprocessing.Process(
-            target=self.savebuffer, args=(
+            target=self.savebuffer, 
+            args=(
                 self.vpath, 
-                self.bufqueue,
+                self.bufqueue_f,
                 self.vidstartlen, 
-                self.stopsig)).start()
+                self.stopsig,
+                self.bufwait
+            )
+        ).start()
         Thread(target=self.fillbuffer, args=()).start() 
         
     def stop(self):
@@ -855,10 +868,10 @@ class Saver():
             self.buffer[:,:,buffer_idx]=frame
             buffer_idx += 1
             if buffer_idx == self.bufsize:
-                self.bufqueue.put(self.buffer)
+                self.bufqueue_f.put(self.buffer)
                 buffer_idx = 0
         if buffer_idx != 0:
-            self.bufqueue.put(self.buffer[:,:,0:buffer_idx])
+            self.bufqueue_f.put(self.buffer[:,:,0:buffer_idx])
         time.sleep(.1)
         self.stopsig.set()
         print('buffer closed')
@@ -875,13 +888,13 @@ class Saver():
                 chunks = (self.scale.h, self.scale.w, self.bufsize))
 
     @staticmethod
-    def savebuffer(vpath, bufqueue, filelen, stopsig):
+    def savebuffer(vpath, bufqueue, filelen, stopsig, bufwait):
         fnums=[0,0]
         with h5py.File(name = vpath, mode = 'r+') as vfile:
             video = vfile['video']
             while not stopsig.is_set():
                 try:
-                    buffer = bufqueue.get(timeout=10)
+                    buffer = bufqueue_f.get(timeout=bufwait)
                     fnums[0] = fnums[1]
                     fnums[1] = fnums[0] + buffer.shape[2]
                     if fnums[1] >= filelen:
