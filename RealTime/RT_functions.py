@@ -233,7 +233,9 @@ class Video():
         self.frame_time = None
         self.ref = None
         self.dif = None
-        self.fq = queue.Queue(buffer)
+        #self.fq = queue.Queue(buffer)
+        self.fq = multiprocessing.Queue(buffer)
+        #
         self.params_loaded = False
         self.crop_bnds = None
         self.mask = None
@@ -424,7 +426,9 @@ class Video():
 
                 #add frame to video queue
                 if self.fq.full():
-                    self.fq.queue.popleft()
+                    #self.fq.queue.popleft()
+                    self.fq.get()
+                    #
                 self.fq.put(self.frame)             
 
             
@@ -450,7 +454,9 @@ class Video():
         """
         
         samples = int(secs*self.fps)
-        self.fq.queue.clear()
+        #self.fq.queue.clear()
+        while not self.fq.empty(): self.fq.get()
+        #   
         for smpl in np.arange(samples):
             frame  = self.fq.get()
             if smpl!=0:
