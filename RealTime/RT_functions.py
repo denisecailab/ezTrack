@@ -85,6 +85,8 @@ class Video():
         - track_window_wt
         - track_rmvwire
         - track_rmvwire_krn
+        - writer_startsig
+        - writer_startsig
     
     """
 
@@ -132,7 +134,7 @@ class Video():
             dif:: [array]
                 The features of the most recently captured frame used for processing.
 
-            fq:: [queue.queue]
+            fq:: [multiprocessing.Queue]
                 Queue of video frames.  Currently only used for reference creation
                 (Video.ref_create) and saving (see class Saver).
 
@@ -221,6 +223,17 @@ class Video():
 
             track_rmvwire_krn:: [unsigned integer]
                 Size of kernel used for morphological opening to remove wire.
+            
+            writer_startsig:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with writer process.
+                Safest to invoke using self.writer_start
+            
+            writer_stopsig:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with writer process.
+                Safest to invoke using self.writer_stop
+                
+            writer_complete:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with writer process.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -233,9 +246,7 @@ class Video():
         self.frame_time = None
         self.ref = None
         self.dif = None
-        #self.fq = queue.Queue(buffer)
         self.fq = multiprocessing.Queue(buffer)
-        #
         self.params_loaded = False
         self.crop_bnds = None
         self.mask = None
@@ -256,6 +267,9 @@ class Video():
         self.track_window_wt = 0.9
         self.track_rmvwire = False
         self.track_rmvwire_krn = 10
+        self.writer_startsig = multiprocessing.Event() 
+        self.writer_stopsig = multiprocessing.Event() 
+        self.writer_complete = multiprocessing.Event() 
   
 
 
@@ -339,6 +353,9 @@ class Video():
         
         self.started = False
         time.sleep(.1)
+        while not self.writer_complete.is_set():
+            time.sleep(.1)
+        self.writer_complete.clear()
         self.stream.release()  
   
 
@@ -426,9 +443,7 @@ class Video():
 
                 #add frame to video queue
                 if self.fq.full():
-                    #self.fq.queue.popleft()
                     self.fq.get()
-                    #
                 self.fq.put(self.frame)             
 
             
@@ -783,6 +798,170 @@ class Video():
             self.scale_set(scale = self.scale)
         self.params_loaded = True
 
+
+        
+    def writer_init(self, dpath = '/', filename = 'vid.avi', compression = "MJPG", fps=30):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Creates cv2.VideoWriter process.
+        
+        -------------------------------------------------------------------------------------
+        Args:
+            dpath:: [string]
+                Directory to save video file to.
+                
+            filename:: [string]
+                Name of video file to save to.  Must have '.avi' extension
+                
+            compression:: [string]
+                Compression algorithm.  Choose from the following:
+                    0 = no compression
+                    'MJPG' = lossly compression.
+                    'FFV1' = lossless compression
+                    'XVID' = lossless compression
+            
+            fps:: [int]
+                FPS written to codec.  May only except certain values.
+
+        -------------------------------------------------------------------------------------
+        Notes:
+            
+            Does not begin saving process.  Only creates writer object.
+            Use vid.writer_start and vid.writer_stop to initiate/stop saving.
+
+
+        """
+        
+        vpath = os.path.join(os.path.abspath(dpath), filename)
+        multiprocessing.Process(
+            target=self.writer_writer,
+            args=(
+                vpath,
+                compression,
+                fps,
+                self.fq,
+                self.scale_w, 
+                self.scale_h,
+                self.writer_startsig,
+                self.writer_stopsig,
+                self.writer_complete
+            )
+        ).start()
+
+        
+        
+    def writer_start(self):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Signals to begin writing frames.  
+
+        -------------------------------------------------------------------------------------       
+        Notes:
+        
+            Must follow vid.writer_init()
+
+        """
+        
+        self.writer_startsig.set()
+
+
+        
+    def writer_stop(self):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Signals to end writing frames.  
+
+        -------------------------------------------------------------------------------------       
+        Notes:
+        
+            Must follow vid.writer_init()
+
+        """
+        
+        self.writer_stopsig.set()
+
+
+        
+    @staticmethod
+    def writer_writer(vpath, compression, fps, fq, scale_w, scale_h, startsig, stopsig, complete):
+        
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Creates cv2.VideoWriter object.  By default executed by vid.writer_init as distinct
+        process.
+        
+        -------------------------------------------------------------------------------------
+        Args:
+            vpath:: [string]
+                Full path of file to save video file to.
+                
+            compression:: [string]
+                Compression algorithm.  Choose from the following:
+                    0 = no compression
+                    'MJPG' = lossly compression.
+                    'FFV1' = lossless compression
+                    'XVID' = lossless compression
+            
+            fps:: [int]
+                FPS written to codec.  May only except certain values.
+                
+            fq:: [multiprocessing.Queue]
+                Queue holding frames to write to disc.
+                
+            scale_w:: [int]
+                Width of frame.
+                
+            scale_h:: [int]
+                Height of frame
+                
+            startsig:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with main process.
+                
+            startsig:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with main process.
+            
+            complete:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with main process.
+
+        -------------------------------------------------------------------------------------
+        Notes:
+
+        """
+        
+        writer = cv2.VideoWriter(
+            filename = vpath, 
+            fourcc = cv2.VideoWriter_fourcc(*compression) if compression in ["MJPG", "FFV1", "XVID"] else 0, 
+            fps = fps, 
+            frameSize = (scale_w, scale_h),
+            isColor = False
+        )
+        while not startsig.is_set():
+            time.sleep(.1)
+        while not fq.empty(): 
+            fq.get()
+        while not stopsig.is_set():
+            try:
+                frame = fq.get(timeout=1000/fps)
+                writer.write(frame)
+            except:
+                pass
+        while not fq.empty():
+            writer.write(fq.get)
+            
+        time.sleep(1)
+        writer.release()
+        complete.set()
+        startsig.clear()
+        stopsig.clear()
+
+
         
 
 def hv_baseimage(frame, text=None):  
@@ -825,6 +1004,7 @@ def hv_baseimage(frame, text=None):
 
 
 #
+# Old method for saving video frames to hdf5
 # This has not been tested in quite a while
 # Not sure if it works
 #
@@ -833,12 +1013,14 @@ class Saver():
     def __init__(self, vid, dpath, filename='vid.hd5f', bufsize=300):
         self.vpath = os.path.join(dpath, filename)
         self.scale = vid.scale
+        self.scale_h = vid.scale_h
+        self.scale_w = vid.scale_w
         self.fq = vid.fq
         self.bufsize = bufsize
         self.bufwait = bufsize * vid.fps
         self.buffer = np.zeros((
-                self.scale.h,
-                self.scale.w,
+                vid.scale_h,
+                vid.scale_w,
                 self.bufsize
             )).astype('uint8')
         self.bufqueue_f = multiprocessing.Queue()
@@ -849,7 +1031,7 @@ class Saver():
 
     def start(self):
         self.started = True
-        self.fq.queue.clear()
+        while not self.fq.empty: self.fq.get()
         multiprocessing.Process(
             target=self.savebuffer, 
             args=(
@@ -887,11 +1069,11 @@ class Saver():
         with h5py.File(name = self.vpath, mode = 'w') as vfile:
             vfile.create_dataset(
                 name = 'video',
-                shape = (self.scale.h, self.scale.w, self.vidstartlen),
-                maxshape = (self.scale.h, self.scale.w, None),
+                shape = (self.scale_h, self.scale_w, self.vidstartlen),
+                maxshape = (self.scale_h, self.scale_w, None),
                 compression="lzf",
                 dtype = 'i1',
-                chunks = (self.scale.h, self.scale.w, self.bufsize))
+                chunks = (self.scale_h, self.scale_w, self.bufsize))
 
     @staticmethod
     def savebuffer(vpath, bufqueue, filelen, stopsig, bufwait):
@@ -914,5 +1096,31 @@ class Saver():
         print('frames saved: {x}'.format(x=fnums[1])) 
         stopsig.clear()      
 
+        
+        
+        
+        
+        
+        
+   
+    
 
-
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
