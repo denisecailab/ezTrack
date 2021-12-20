@@ -3,8 +3,8 @@
 LIST OF CLASSES/FUNCTIONS
 
 Video (Class)
-
 hv_baseimage
+clear_queues
 
 """
 
@@ -28,13 +28,16 @@ hv.notebook_extension('bokeh')
 
 
 
-
 class Video():
     
     """ 
     -------------------------------------------------------------------------------------
     
-    Base container for holding video stream and all tracking paramaters
+    Base container for holding video stream, tracking paramaters, and video read/write
+    methods.
+    
+    Of note, data/video saving/writing is completed in separate process 
+    (Video.writer_writer).  
 
     -------------------------------------------------------------------------------------
     
@@ -55,6 +58,10 @@ class Video():
         - roi_define
         - params_save
         - params_load
+        - writer_init
+        - writer_start
+        - writer_stop
+        - writer_writer
     
     Attributes (see __init__ for details):
     
@@ -64,7 +71,6 @@ class Video():
         - frame_time
         - ref
         - dif
-        - fq
         - params_loaded
         - crp_bnds
         - mask
@@ -87,7 +93,11 @@ class Video():
         - track_rmvwire_krn
         - writer_startsig
         - writer_startsig
-    
+        - writer_complete
+        - q_frm
+        - q_frmt
+        - q_frmyx
+ 
     """
 
     def __init__(self, src=0, scale=None, buffer=10):
@@ -100,15 +110,15 @@ class Video():
         -------------------------------------------------------------------------------------
         Args:
             src:: [int]
-                USB input on camera.
+                USB input of camera.
 
             scale:: [float, 0<x<=1]
                 Downsampling of each frame, such that 0.3 would result in 30% input size. 
-                Uses OpenCV INTER_NEAREST method. If no downsampling can be kept = None.
+                Uses OpenCV INTER_NEAREST method. If no downsampling can be set to None.
 
             buffer:: [unsigned integer]
-                Size of Video.fq, the buffer used to synchronize frames in main tracking 
-                thread with outside functions. 
+                Max size of queues, the buffer used to synchronize frames in main tracking 
+                process with data/video writer process.
                 
         -------------------------------------------------------------------------------------        
         Attributes:
@@ -125,22 +135,19 @@ class Video():
                 updated it is safer to copy than access directly.
                 
             frame_time:: [float64]
-                Time frame was acquired by OpenCV.
+                Time current frame was acquired by OpenCV.
 
             ref:: [array]
-                Reference frame composed of field of view without animal that is necessary for 
+                Reference frame composed of field of view without animal, necessary for 
                 tracking. See Video.ref_create for details.  Same shape as Video.frame.
                 
             dif:: [array]
-                The features of the most recently captured frame used for processing.
-
-            fq:: [multiprocessing.Queue]
-                Queue of video frames.  Currently only used for reference creation
-                (Video.ref_create) and saving (see class Saver).
+                The features of the most recently captured frame used for tracking.
+                Conceptually, dif = frame - ref, but read tracking params below for details.
 
             params_loaded:: [bool]
                 Indicates whether parameters have been loaded from a file using
-                Video.params_load. 
+                Video.params_load method. 
 
             crp_bnds:: [None, holoviews.streams.BoxEdit or dictionary]
                 Defines cropping bounds of frame, after scaling. Set to None if no cropping 
@@ -173,14 +180,16 @@ class Video():
                 Video.set_scale function.     
 
             scale_orig:: [tuple]
-                Dimensions of original video frame, before downsampling: (width, height)
+                Dimensions of original video frame, before downsampling: (width, height).
 
             scale_w:: [int]
-                Width of frame, including any applied downsampling.
+                Width of frame, pre-cropping, including any applied downsampling. 
+                Set by Video.scale_set()
 
             scale_h:: [type]
-                Height of frame, including any applied downsampling.
-
+                Height of frame, pre-cropping, including any applied downsampling.
+                Set by Video.scale_set()
+                
             track:: [bool]
                 Set to True to initiate tracking. Video.started should be True before
                 tracking is begun.
@@ -198,9 +207,9 @@ class Video():
                 are thresholded to make subsequent defining of center of mass more reliable. 
 
             track_method:: [string]
-                Set to 'abs', 'light', or 'dark'. If 'abs', absolute difference, between 
+                Set to 'abs', 'light', or 'dark'. If 'abs', absolute difference between 
                 reference and current frame is taken, and thus the background of the frame 
-                doesn't matter. 'light' specifies thatthe animal is lighter than the background.
+                doesn't matter. 'light' specifies that the animal is lighter than the background.
                 'dark' specifies that the animal is darker than the background. 
 
             track_window_use: [bool]
@@ -216,13 +225,18 @@ class Video():
 
             track_window_wt:: [float between 0-1]
                 0-1 scale for window, if used, where 1 is maximal weight of window surrounding 
-                prior locaiton. 
+                prior location. 
 
             track_rmvwire:: [bool]
                 True/False, indicating whether to use wire removal function. 
 
             track_rmvwire_krn:: [unsigned integer]
                 Size of kernel used for morphological opening to remove wire.
+                Should be larger than wire and smaller than animal.
+                
+            writer_initiated:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with writer process.
+                Safest to invoke using self.writer_start
             
             writer_startsig:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
@@ -234,6 +248,16 @@ class Video():
                 
             writer_complete:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
+                
+            q_frm:: [multiprocessing.Queue]
+                Queue of video frames.  Used for reference creation
+                (Video.ref_create) and saving.
+                
+            q_frmt:: [multiprocessing.Queue]
+                Queue of video frame times.  Used for saving.
+                
+            q_frmyx:: [multiprocessing.Queue]
+                Queue of video frame positions.  Used for saving.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -245,8 +269,7 @@ class Video():
         self.frame = None
         self.frame_time = None
         self.ref = None
-        self.dif = None
-        self.fq = multiprocessing.Queue(buffer)
+        self.dif = None       
         self.params_loaded = False
         self.crop_bnds = None
         self.mask = None
@@ -267,10 +290,13 @@ class Video():
         self.track_window_wt = 0.9
         self.track_rmvwire = False
         self.track_rmvwire_krn = 10
+        self.writer_initiated = multiprocessing.Event() 
         self.writer_startsig = multiprocessing.Event() 
         self.writer_stopsig = multiprocessing.Event() 
         self.writer_complete = multiprocessing.Event() 
-  
+        self.q_frm = multiprocessing.Queue(buffer)
+        self.q_frmt = multiprocessing.Queue(buffer)
+        self.q_frmyx = multiprocessing.Queue(buffer)
 
 
     def scale_set(self, scale=1):
@@ -328,11 +354,21 @@ class Video():
         Notes:
         
             Counter to Video.release, this does not release the CV2.VideoCapture instance. 
-            This allows the user to stop and and then re-start tracking, if desired.
+            This allows the user to stop and and then re-start tracking, if desired. 
 
         """
         
         self.started = False
+        if self.writer_initiated.is_set():
+            if self.writer_startsig.is_set():
+                if not self.writer_stopsig.is_set():
+                    self.writer_stopsig.set()
+            else:
+                #ensures closing of process and release
+                #of video writer without writing
+                self.writer_stopsig.set()
+                self.writer_startsig.set()
+                
         
         
         
@@ -351,11 +387,14 @@ class Video():
 
         """
         
-        self.started = False
-        time.sleep(.1)
-        while not self.writer_complete.is_set():
-            time.sleep(.1)
+        self.stop()
+        if self.writer_startsig.is_set():
+            while not self.writer_complete.is_set():
+                time.sleep(.1)
+        self.writer_startsig.clear()
+        self.writer_stopsig.clear()
         self.writer_complete.clear()
+        clear_queues([self.q_frm, self.q_frmt, self.q_frmyx])
         self.stream.release()  
   
 
@@ -392,7 +431,10 @@ class Video():
                 cv2.drawMarker(img=frame,position=markposition,color=255)
             cv2.imshow('Video', frame)
             if show_dif:
-                cv2.imshow('Difference', self.dif.copy().astype('uint8'))
+                try:
+                    cv2.imshow('Difference', self.dif.copy().astype('uint8'))
+                except:
+                    pass
             #wait for 'q' key response to exit
             if (cv2.waitKey(int(1000/self.fps) & 0xFF) == 113):
                 display = False       
@@ -441,10 +483,13 @@ class Video():
                                 int(self.track_yx[0]), int(self.track_yx[1])
                             ]
 
-                #add frame to video queue
-                if self.fq.full():
-                    self.fq.get()
-                self.fq.put(self.frame)             
+                #add frame info to video queues
+                for q in [self.q_frm, self.q_frmt, self.q_frmyx]:
+                    if q.full():
+                        q.get()
+                self.q_frm.put(self.frame) 
+                self.q_frmt.put(self.frame_time)
+                self.q_frmyx.put(self.track_yx)
 
             
             
@@ -469,11 +514,11 @@ class Video():
         """
         
         samples = int(secs*self.fps)
-        #self.fq.queue.clear()
-        while not self.fq.empty(): self.fq.get()
-        #   
+        
+        clear_queues([self.q_frm, self.q_frmt, self.q_frmyx])
+        
         for smpl in np.arange(samples):
-            frame  = self.fq.get()
+            frame  = self.q_frm.get()
             if smpl!=0:
                 mean = mean*(smpl/(smpl+1)) + frame*(1/(smpl+1))
             else:
@@ -485,7 +530,7 @@ class Video():
   
 
 
-    def locate(self,frame):
+    def locate(self, frame):
         
         """ 
         -------------------------------------------------------------------------------------
@@ -800,19 +845,29 @@ class Video():
 
 
         
-    def writer_init(self, dpath = '/', filename = 'vid.avi', compression = "MJPG", fps=30):
+    def writer_init(
+        self,
+        dpath = '/',
+        dfilename = 'data.csv',
+        vfilename = 'vid.avi', 
+        compression = "MJPG", 
+        fps=30
+    ):
         
         """ 
         -------------------------------------------------------------------------------------
 
-        Creates cv2.VideoWriter process.
+        Creates cv2.VideoWriter process and empty csv to save data to.
         
         -------------------------------------------------------------------------------------
         Args:
             dpath:: [string]
-                Directory to save video file to.
+                Directory to save data/video file to.
                 
-            filename:: [string]
+            dfilename:: [string]
+                Name of file to save to.  Must have '.csv' extension
+                
+            vfilename:: [string]
                 Name of video file to save to.  Must have '.avi' extension
                 
             compression:: [string]
@@ -828,27 +883,33 @@ class Video():
         -------------------------------------------------------------------------------------
         Notes:
             
-            Does not begin saving process.  Only creates writer object.
-            Use vid.writer_start and vid.writer_stop to initiate/stop saving.
+            Does not begin saving.  Only creates writer object.
+            Use Video.writer_start and Video.writer_stop to initiate/stop saving.
 
 
         """
         
-        vpath = os.path.join(os.path.abspath(dpath), filename)
+        cpath = os.path.join(os.path.abspath(dpath), dfilename)
+        vpath = os.path.join(os.path.abspath(dpath), vfilename)
+    
         multiprocessing.Process(
             target=self.writer_writer,
             args=(
+                cpath,
                 vpath,
                 compression,
                 fps,
-                self.fq,
-                self.scale_w, 
-                self.scale_h,
+                self.q_frm,
+                self.q_frmt,
+                self.q_frmyx,
+                self.frame.copy().shape[1], 
+                self.frame.copy().shape[0],
                 self.writer_startsig,
                 self.writer_stopsig,
                 self.writer_complete
             )
         ).start()
+        self.writer_initiated.set()
 
         
         
@@ -889,7 +950,7 @@ class Video():
 
         
     @staticmethod
-    def writer_writer(vpath, compression, fps, fq, scale_w, scale_h, startsig, stopsig, complete):
+    def writer_writer(cpath, vpath, compression, fps, q_frm, q_frmt, q_frmyx, scale_w, scale_h, startsig, stopsig, complete):
         
         """ 
         -------------------------------------------------------------------------------------
@@ -899,6 +960,9 @@ class Video():
         
         -------------------------------------------------------------------------------------
         Args:
+            cpath:: [string]
+                Full path of csv file to save data to.
+            
             vpath:: [string]
                 Full path of file to save video file to.
                 
@@ -912,8 +976,15 @@ class Video():
             fps:: [int]
                 FPS written to codec.  May only except certain values.
                 
-            fq:: [multiprocessing.Queue]
-                Queue holding frames to write to disc.
+            q_frm:: [multiprocessing.Queue]
+                Queue of video frames.  Used for reference creation
+                (Video.ref_create) and saving.
+                
+            q_frmt:: [multiprocessing.Queue]
+                Queue of video frame times.  Used for saving.
+                
+            q_frmyx:: [multiprocessing.Queue]
+                Queue of video frame positions.  Used for saving.
                 
             scale_w:: [int]
                 Width of frame.
@@ -935,6 +1006,10 @@ class Video():
 
         """
         
+        import pandas as pd
+        import numpy as np
+        import cv2
+        
         writer = cv2.VideoWriter(
             filename = vpath, 
             fourcc = cv2.VideoWriter_fourcc(*compression) if compression in ["MJPG", "FFV1", "XVID"] else 0, 
@@ -942,24 +1017,33 @@ class Video():
             frameSize = (scale_w, scale_h),
             isColor = False
         )
+        
+        pd.DataFrame(columns = ['frame_time', 'y', 'x']).to_csv(cpath, header=True, index=False)
+        
+        
         while not startsig.is_set():
-            time.sleep(.1)
-        while not fq.empty(): 
-            fq.get()
+            time.sleep(.1)            
+        clear_queues([q_frm, q_frmt, q_frmyx])
+        
         while not stopsig.is_set():
             try:
-                frame = fq.get(timeout=1000/fps)
+                frame = q_frm.get(timeout=1000/fps)
+                frame_time = q_frmt.get(timeout=1000/fps)
+                frame_pos_yx = q_frmyx.get(timeout=1000/fps)
                 writer.write(frame)
+                pd.DataFrame(
+                    {'frame_time' : frame_time, 'y' : frame_pos_yx[0], 'x' : frame_pos_yx[1]},
+                    index=[0]
+                ).to_csv(cpath, header=False, index=False, mode='a')
             except:
                 pass
-        while not fq.empty():
-            writer.write(fq.get)
+            
+        #while not q_frm.empty():
+        #    writer.write(q_frm.get)
             
         time.sleep(1)
         writer.release()
         complete.set()
-        startsig.clear()
-        stopsig.clear()
 
 
         
@@ -1003,98 +1087,33 @@ def hv_baseimage(frame, text=None):
 
 
 
-#
-# Old method for saving video frames to hdf5
-# This has not been tested in quite a while
-# Not sure if it works
-#
-class Saver():
+def clear_queues(queues):
+    
+    """ 
+    -------------------------------------------------------------------------------------
 
-    def __init__(self, vid, dpath, filename='vid.hd5f', bufsize=300):
-        self.vpath = os.path.join(dpath, filename)
-        self.scale = vid.scale
-        self.scale_h = vid.scale_h
-        self.scale_w = vid.scale_w
-        self.fq = vid.fq
-        self.bufsize = bufsize
-        self.bufwait = bufsize * vid.fps
-        self.buffer = np.zeros((
-                vid.scale_h,
-                vid.scale_w,
-                self.bufsize
-            )).astype('uint8')
-        self.bufqueue_f = multiprocessing.Queue()
-        self.vidstartlen = self.bufsize*10
-        self.createfile()
-        self.started = False
-        self.stopsig = multiprocessing.Event()
+    Used to empty multiprocessing queues.
 
-    def start(self):
-        self.started = True
-        while not self.fq.empty: self.fq.get()
-        multiprocessing.Process(
-            target=self.savebuffer, 
-            args=(
-                self.vpath, 
-                self.bufqueue_f,
-                self.vidstartlen, 
-                self.stopsig,
-                self.bufwait
-            )
-        ).start()
-        Thread(target=self.fillbuffer, args=()).start() 
-        
-    def stop(self):
-        self.started = False
+    -------------------------------------------------------------------------------------
+    Args:
+        queues:: [list]
+            List containing multiprocessing queues to be cleared
 
-    def fillbuffer(self):
-        buffer_idx = 0
-        f = 0
-        while self.started:
-            frame = self.fq.get()
-            f += 1
-            self.buffer[:,:,buffer_idx]=frame
-            buffer_idx += 1
-            if buffer_idx == self.bufsize:
-                self.bufqueue_f.put(self.buffer)
-                buffer_idx = 0
-        if buffer_idx != 0:
-            self.bufqueue_f.put(self.buffer[:,:,0:buffer_idx])
-        time.sleep(.1)
-        self.stopsig.set()
-        print('buffer closed')
-        print('frames got: {x}'.format(x=f))
+    -------------------------------------------------------------------------------------
+    Notes:
 
-    def createfile(self):
-        with h5py.File(name = self.vpath, mode = 'w') as vfile:
-            vfile.create_dataset(
-                name = 'video',
-                shape = (self.scale_h, self.scale_w, self.vidstartlen),
-                maxshape = (self.scale_h, self.scale_w, None),
-                compression="lzf",
-                dtype = 'i1',
-                chunks = (self.scale_h, self.scale_w, self.bufsize))
 
-    @staticmethod
-    def savebuffer(vpath, bufqueue, filelen, stopsig, bufwait):
-        fnums=[0,0]
-        with h5py.File(name = vpath, mode = 'r+') as vfile:
-            video = vfile['video']
-            while not stopsig.is_set():
-                try:
-                    buffer = bufqueue_f.get(timeout=bufwait)
-                    fnums[0] = fnums[1]
-                    fnums[1] = fnums[0] + buffer.shape[2]
-                    if fnums[1] >= filelen:
-                        filelen += 1000
-                        video.resize(
-                            (buffer.shape[0], buffer.shape[1], filelen))
-                    video[:,:,fnums[0]:fnums[1]] = buffer
-                except:
-                    None
-            video.resize((buffer.shape[0], buffer.shape[1], fnums[1]))
-        print('frames saved: {x}'.format(x=fnums[1])) 
-        stopsig.clear()      
+    """
+    
+    while any([not q.empty() for q in queues]):
+        for q in queues:
+            try:
+                _ = q.get_nowait()
+            except:
+                pass
+
+
+   
 
         
         
