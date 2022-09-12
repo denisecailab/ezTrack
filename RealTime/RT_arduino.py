@@ -174,7 +174,7 @@ class Arduino():
       
     
     
-    def io_transmitter(self):
+    def io_transmitter(self, timeout=.001):
         
         """ 
         -------------------------------------------------------------------------------------
@@ -196,13 +196,14 @@ class Arduino():
                     self.ser.write(cmd)
                 else:
                     hold_tasks.append((ts, cmd))
-            for tsk in hold_tasks:
-                self.q_tasks.put(tsk)
+                for tsk in hold_tasks:
+                    self.q_tasks.put(tsk)
             if self.state=='stopped':
                 for name, pin in self.keys_dout.items():
                     self.digitalLow(pin)
                 self.ser.close()
                 break
+            time.sleep(timeout)
     
     
     
@@ -252,7 +253,7 @@ class Arduino():
         """
         
         cur_ts = time.time()
-        if pin is str:
+        if type(pin) is str:
             pin = self.keys_dout[pin]
         self.io_send((pin, self.cmnds['high']), cur_ts)
         if hold is not None:
@@ -283,7 +284,7 @@ class Arduino():
         """
         
         cur_ts = time.time()
-        if pin is str:
+        if type(pin) is str:
             pin = self.keys_dout[pin]
         self.io_send((pin, self.cmnds['low']), cur_ts)
         if hold is not None:
