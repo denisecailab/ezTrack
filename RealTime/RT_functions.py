@@ -97,6 +97,7 @@ class Video():
         - q_frm
         - q_frmt
         - q_frmyx
+        - q_roi
  
     """
 
@@ -236,18 +237,29 @@ class Video():
                 
             writer_initiated:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
-                Safest to invoke using self.writer_start
+                Informs whether writer has been successfully initiated. 
             
             writer_startsig:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
-                Safest to invoke using self.writer_start
+                Used to start writing frames after initiation and can be used to
+                query state of writer. Safest to invoke with self.writer_start.
             
             writer_stopsig:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
-                Safest to invoke using self.writer_stop
+                Used to stop writer after initiation and can be used to
+                query state of writer. Safest to invoke with vid.stop,
+                or vid.release, which will sotp writer and clear queues. 
+                Self.writer_stop will similarly stop writing, but will not
+                clear queus.
+                
+            writer_emptyq:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with writer process.
+                Can be set just prior to writer_stopsig to ensure that any frames
+                remaining in buffer are saved.
                 
             writer_complete:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
+                Signals that writing is complete. 
                 
             q_frm:: [multiprocessing.Queue]
                 Queue of video frames.  Used for reference creation
@@ -258,6 +270,9 @@ class Video():
                 
             q_frmyx:: [multiprocessing.Queue]
                 Queue of video frame positions.  Used for saving.
+                
+            q_roi:: [multiprocessing.Queue]
+                Queue of ROI state.  Used for saving.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -293,11 +308,14 @@ class Video():
         self.writer_initiated = multiprocessing.Event() 
         self.writer_startsig = multiprocessing.Event() 
         self.writer_stopsig = multiprocessing.Event() 
+        self.writer_emptyq = multiprocessing.Event() 
         self.writer_complete = multiprocessing.Event() 
         self.q_frm = multiprocessing.Queue(buffer)
         self.q_frmt = multiprocessing.Queue(buffer)
         self.q_frmyx = multiprocessing.Queue(buffer)
+        self.q_roi = multiprocessing.Queue(buffer)
 
+        
 
     def scale_set(self, scale=1):
         
@@ -354,23 +372,25 @@ class Video():
         Notes:
         
             Counter to Video.release, this does not release the CV2.VideoCapture instance. 
-            This allows the user to stop and and then re-start tracking, if desired. 
 
         """
         
         self.started = False
-        if self.writer_initiated.is_set():
+        if self.writer_initiated.is_set():            
             if self.writer_startsig.is_set():
-                if not self.writer_stopsig.is_set():
-                    self.writer_stopsig.set()
+                self.writer_emptyq.set()
+                self.writer_stopsig.set() 
             else:
-                #ensures closing of process and release
-                #of video writer without writing
                 self.writer_stopsig.set()
-                self.writer_startsig.set()
+            while not self.writer_complete.is_set():
+                time.sleep(.1)
+        self.writer_startsig.clear()
+        self.writer_stopsig.clear()
+        self.writer_complete.clear()
+        self.writer_emptyq.clear()
+        self.writer_complete.clear()
                 
-        
-        
+                
         
     def release(self):
         
@@ -383,18 +403,11 @@ class Video():
         Notes:
         
             See Video.stop if you would like to stop retrieving frames wihtout releasing 
-            camera.
+            camera. 
 
         """
         
         self.stop()
-        if self.writer_startsig.is_set():
-            while not self.writer_complete.is_set():
-                time.sleep(.1)
-        self.writer_startsig.clear()
-        self.writer_stopsig.clear()
-        self.writer_complete.clear()
-        clear_queues([self.q_frm, self.q_frmt, self.q_frmyx])
         self.stream.release()  
   
 
@@ -484,12 +497,13 @@ class Video():
                             ]
 
                 #add frame info to video queues
-                for q in [self.q_frm, self.q_frmt, self.q_frmyx]:
+                for q in [self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi]:
                     if q.full():
                         q.get()
                 self.q_frm.put(self.frame) 
                 self.q_frmt.put(self.frame_time)
                 self.q_frmyx.put(self.track_yx)
+                self.q_roi.put(self.track_roi)
 
             
             
@@ -522,7 +536,7 @@ class Video():
             if smpl!=0:
                 mean = mean*(smpl/(smpl+1)) + frame*(1/(smpl+1))
             else:
-                mean =self.frame
+                mean = self.frame
             if print_sts:
                 print((smpl+1)/samples*secs)
             clear_output(wait=True)
@@ -847,6 +861,8 @@ class Video():
         
     def writer_init(
         self,
+        save_vid = True,
+        save_csv = True,
         dpath = '/',
         dfilename = 'data.csv',
         vfilename = 'vid.avi', 
@@ -861,6 +877,12 @@ class Video():
         
         -------------------------------------------------------------------------------------
         Args:
+            save_vid:: [bool]
+                Whether or not to save video.
+                
+            save_csv:: [bool]
+                Whether or not to save csv.
+                
             dpath:: [string]
                 Directory to save data/video file to.
                 
@@ -871,7 +893,7 @@ class Video():
                 Name of video file to save to.  Must have '.avi' extension
                 
             compression:: [string]
-                Compression algorithm.  Choose from the following:
+                Video compression algorithm.  Choose from the following:
                     0 = no compression
                     'MJPG' = lossly compression.
                     'FFV1' = lossless compression
@@ -895,21 +917,29 @@ class Video():
         multiprocessing.Process(
             target=self.writer_writer,
             args=(
+                save_vid,
+                save_csv,
                 cpath,
                 vpath,
                 compression,
                 fps,
+                self.roi_names,
                 self.q_frm,
                 self.q_frmt,
                 self.q_frmyx,
+                self.q_roi,
                 self.frame.copy().shape[1], 
                 self.frame.copy().shape[0],
+                self.writer_initiated,
                 self.writer_startsig,
                 self.writer_stopsig,
-                self.writer_complete
+                self.writer_emptyq,
+                self.writer_complete,
+                self.track
             )
         ).start()
-        self.writer_initiated.set()
+        while not self.writer_initiated.is_set():
+            pass
 
         
         
@@ -950,7 +980,11 @@ class Video():
 
         
     @staticmethod
-    def writer_writer(cpath, vpath, compression, fps, q_frm, q_frmt, q_frmyx, scale_w, scale_h, startsig, stopsig, complete):
+    def writer_writer(
+        save_vid, save_csv, cpath, vpath, compression, fps, roi_names, 
+        q_frm, q_frmt, q_frmyx, q_roi, scale_w, scale_h, 
+        initsig, startsig, stopsig, emptyq, complete, track
+    ):
         
         """ 
         -------------------------------------------------------------------------------------
@@ -960,6 +994,12 @@ class Video():
         
         -------------------------------------------------------------------------------------
         Args:
+            save_vid:: [bool]
+                Whether or not to save video.
+                
+            save_csv:: [bool]
+                Whether or not to save csv.
+                
             cpath:: [string]
                 Full path of csv file to save data to.
             
@@ -976,6 +1016,9 @@ class Video():
             fps:: [int]
                 FPS written to codec.  May only except certain values.
                 
+            roi_names:: [list]
+                List of region of interest names.
+                
             q_frm:: [multiprocessing.Queue]
                 Queue of video frames.  Used for reference creation
                 (Video.ref_create) and saving.
@@ -986,20 +1029,45 @@ class Video():
             q_frmyx:: [multiprocessing.Queue]
                 Queue of video frame positions.  Used for saving.
                 
+            q_roi:: [multiprocessing.Queue]
+                Queue of ROI state.  Used for saving.
+                
             scale_w:: [int]
                 Width of frame.
                 
             scale_h:: [int]
                 Height of frame
                 
-            startsig:: [multiprocessing.Event]
-                Multiprocessing event used to coordinate with main process.
+            initsig:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with writer process.
+                Informs whether writer has been successfully initiated. 
                 
             startsig:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with main process.
+                Used to start writing frames after initiation and can be used to
+                query state of writer. Safest to invoke with self.writer_start.
+                
+            stopsig:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with main process.
+                Used to stop writer after initiation and can be used to
+                query state of writer. Safest to invoke with vid.stop,
+                or vid.release, which will sotp writer and clear queues. 
+                Self.writer_stop will similarly stop writing, but will not
+                clear queus.
+                
+            emptyq:: [multiprocessing.Event]
+                Multiprocessing event used to coordinate with writer process.
+                Can be set just prior to writer_stopsig to ensure that any frames
+                remaining in buffer are saved.
             
             complete:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with main process.
+                 Signals that writing is complete.
+            
+            track:: [bool]
+                Boolean indicating whether tracking data is to be saved.
+
+               
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -1009,40 +1077,59 @@ class Video():
         import pandas as pd
         import numpy as np
         import cv2
+        import time
         
-        writer = cv2.VideoWriter(
-            filename = vpath, 
-            fourcc = cv2.VideoWriter_fourcc(*compression) if compression in ["MJPG", "FFV1", "XVID"] else 0, 
-            fps = fps, 
-            frameSize = (scale_w, scale_h),
-            isColor = False
-        )
+        #initialize video and csv
+        dkeys = ['frame_time']
+        if track:
+            dkeys = dkeys + ['y', 'x']
+            dkeys = dkeys if roi_names is None else dkeys + roi_names
+        if save_vid:
+            writer = cv2.VideoWriter(
+                filename = vpath, 
+                fourcc = cv2.VideoWriter_fourcc(*compression) if compression in ["MJPG", "FFV1", "XVID"] else 0, 
+                fps = fps, 
+                frameSize = (scale_w, scale_h),
+                isColor = False
+            )
+        if save_csv:
+            pd.DataFrame(columns = dkeys).to_csv(cpath, header=True, index=False)
+        initsig.set()
         
-        pd.DataFrame(columns = ['frame_time', 'y', 'x']).to_csv(cpath, header=True, index=False)
-        
-        
+        #await start (or stop) signal
         while not startsig.is_set():
-            time.sleep(.1)            
-        clear_queues([q_frm, q_frmt, q_frmyx])
+            time.sleep(.01)            
+            #clear_queues([q_frm, q_frmt, q_frmyx, q_roi])
+            if stopsig.is_set():
+                break
+        clear_queues([q_frm, q_frmt, q_frmyx, q_roi])         
         
-        while not stopsig.is_set():
+        #write data
+        while not stopsig.is_set() or emptyq.is_set():
+            if emptyq.is_set() and q_frm.empty():
+                break
             try:
+                dcsv = dict()
                 frame = q_frm.get(timeout=1000/fps)
-                frame_time = q_frmt.get(timeout=1000/fps)
-                frame_pos_yx = q_frmyx.get(timeout=1000/fps)
-                writer.write(frame)
-                pd.DataFrame(
-                    {'frame_time' : frame_time, 'y' : frame_pos_yx[0], 'x' : frame_pos_yx[1]},
-                    index=[0]
-                ).to_csv(cpath, header=False, index=False, mode='a')
+                frame_yx = q_frmyx.get(timeout=1000/fps)  
+                roi = q_roi.get(timeout=1000/fps)
+                dcsv['frame_time'] = q_frmt.get(timeout=1000/fps)
+                if save_csv:
+                    dcsv['y'], dcsv['x'] = frame_yx if track else (None, None)
+                    dcsv.update(roi) if roi is not None else None
+                    pd.DataFrame(
+                        {k:v for k,v in dcsv.items() if k in dkeys},
+                        index=[0]
+                    ).to_csv(cpath, header=False, index=False, mode='a')
+                if save_vid:
+                    writer.write(frame)                     
             except:
                 pass
-            
-        #while not q_frm.empty():
-        #    writer.write(q_frm.get)
-            
-        time.sleep(1)
-        writer.release()
+        
+        #close out
+        time.sleep(.1)
+        if save_vid:
+            writer.release() 
         complete.set()
 
 
