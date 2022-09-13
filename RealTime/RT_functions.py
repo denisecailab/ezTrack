@@ -502,8 +502,9 @@ class Video():
                         q.get()
                 self.q_frm.put(self.frame) 
                 self.q_frmt.put(self.frame_time)
-                self.q_frmyx.put(self.track_yx)
-                self.q_roi.put(self.track_roi)
+                if self.track:
+                    self.q_frmyx.put(self.track_yx)
+                    self.q_roi.put(self.track_roi)
 
             
             
@@ -529,7 +530,7 @@ class Video():
         
         samples = int(secs*self.fps)
         
-        clear_queues([self.q_frm, self.q_frmt, self.q_frmyx])
+        clear_queues([self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi])
         
         for smpl in np.arange(samples):
             frame  = self.q_frm.get()
@@ -1099,24 +1100,22 @@ class Video():
         #await start (or stop) signal
         while not startsig.is_set():
             time.sleep(.01)            
-            #clear_queues([q_frm, q_frmt, q_frmyx, q_roi])
             if stopsig.is_set():
                 break
         clear_queues([q_frm, q_frmt, q_frmyx, q_roi])         
         
         #write data
         while not stopsig.is_set() or emptyq.is_set():
-            if emptyq.is_set() and q_frm.empty():
-                break
             try:
                 dcsv = dict()
-                frame = q_frm.get(timeout=1000/fps)
-                frame_yx = q_frmyx.get(timeout=1000/fps)  
-                roi = q_roi.get(timeout=1000/fps)
-                dcsv['frame_time'] = q_frmt.get(timeout=1000/fps)
+                frame = q_frm.get(timeout=1/fps)
+                dcsv['frame_time'] = q_frmt.get(timeout=1/fps)
+                if track:
+                    frame_yx = q_frmyx.get(timeout=1/fps)  
+                    roi = q_roi.get(timeout=1/fps) if roi_names is not None else None
                 if save_csv:
                     dcsv['y'], dcsv['x'] = frame_yx if track else (None, None)
-                    dcsv.update(roi) if roi is not None else None
+                    dcsv.update(roi) if (track and roi_names is not None) else None
                     pd.DataFrame(
                         {k:v for k,v in dcsv.items() if k in dkeys},
                         index=[0]
@@ -1124,6 +1123,8 @@ class Video():
                 if save_vid:
                     writer.write(frame)                     
             except:
+                if emptyq.is_set():
+                    break
                 pass
         
         #close out
@@ -1131,7 +1132,6 @@ class Video():
         if save_vid:
             writer.release() 
         complete.set()
-
 
         
 
