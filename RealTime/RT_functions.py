@@ -89,6 +89,7 @@ class Video():
         - track_window_use
         - track_window_sz
         - track_window_wt
+        - track_window_reset
         - track_rmvwire
         - track_rmvwire_krn
         - writer_startsig
