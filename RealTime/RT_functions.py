@@ -227,6 +227,10 @@ class Video():
             track_window_wt:: [float between 0-1]
                 0-1 scale for window, if used, where 1 is maximal weight of window surrounding 
                 prior location. 
+                
+            track_window_reset:: [bool]
+                When set to True, window will not be used on tracking of next tracked frame,
+                permitting the window position to be reset.
 
             track_rmvwire:: [bool]
                 True/False, indicating whether to use wire removal function. 
@@ -303,6 +307,7 @@ class Video():
         self.track_window_use = False
         self.track_window_sz = 100
         self.track_window_wt = 0.9
+        self.track_window_reset = False
         self.track_rmvwire = False
         self.track_rmvwire_krn = 10
         self.writer_initiated = multiprocessing.Event() 
@@ -583,15 +588,18 @@ class Video():
             if self.mask['mask'] is not None:
                 dif[self.mask['mask']] = 0  
         if self.track_window_use==True and self.track_yx!=None:
-            ymin = int(self.track_yx[0] - (self.track_window_sz//2))
-            ymax = int(self.track_yx[0] + (self.track_window_sz//2))
-            xmin = int(self.track_yx[1] - (self.track_window_sz//2))
-            xmax = int(self.track_yx[1] + (self.track_window_sz//2))
-            dif_weights = np.ones(dif.shape)*(1-self.track_window_wt)
-            dif_weights[
-                slice(ymin if ymin>0 else 0, ymax),
-                slice(xmin if xmin>0 else 0, xmax)]=1
-            dif = dif*dif_weights
+            if not self.track_window_reset:
+                ymin = int(self.track_yx[0] - (self.track_window_sz//2))
+                ymax = int(self.track_yx[0] + (self.track_window_sz//2))
+                xmin = int(self.track_yx[1] - (self.track_window_sz//2))
+                xmax = int(self.track_yx[1] + (self.track_window_sz//2))
+                dif_weights = np.ones(dif.shape)*(1-self.track_window_wt)
+                dif_weights[
+                    slice(ymin if ymin>0 else 0, ymax),
+                    slice(xmin if xmin>0 else 0, xmax)]=1
+                dif = dif*dif_weights
+            else:
+                self.track_window_reset = False
         
         dif[dif<np.percentile(dif,self.track_thresh)]=0
         self.dif = dif.copy()
