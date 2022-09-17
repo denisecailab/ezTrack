@@ -12,7 +12,6 @@ clear_queues
 import os
 import sys
 import cv2
-import h5py
 import pickle
 import holoviews as hv
 from holoviews import streams
