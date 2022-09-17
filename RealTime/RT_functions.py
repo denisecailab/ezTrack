@@ -18,6 +18,7 @@ from holoviews import streams
 from holoviews.streams import Stream, param
 import numpy as np
 import time
+import datetime
 import threading, multiprocessing, queue
 import functools as fct
 from scipy.ndimage.measurements import center_of_mass
@@ -872,9 +873,9 @@ class Video():
         self,
         save_vid = True,
         save_csv = True,
-        dpath = '/',
-        dfilename = 'data.csv',
-        vfilename = 'vid.avi', 
+        dpath = './',
+        dfilename = None,
+        vfilename = None, 
         compression = "MJPG", 
         fps=30
     ):
@@ -896,10 +897,12 @@ class Video():
                 Directory to save data/video file to.
                 
             dfilename:: [string]
-                Name of file to save to.  Must have '.csv' extension
+                Name of file to save to.  Must have '.csv' extension. 
+                If None, file will be set to YearMonthDay_HourMinuteSecond.csv
                 
             vfilename:: [string]
                 Name of video file to save to.  Must have '.avi' extension
+                If None, file will be set to YearMonthDay_HourMinuteSecond.avi
                 
             compression:: [string]
                 Video compression algorithm.  Choose from the following:
@@ -920,6 +923,11 @@ class Video():
 
         """
         
+        t = datetime.datetime.fromtimestamp(time.time()).strftime("%Y%M%d_%H%M%S")
+        if dfilename is None:
+            dfilename = '.'.join([t, '.csv'])
+        if vfilename is None:
+            vfilename = '.'.join([t, '.avi'])
         cpath = os.path.join(os.path.abspath(dpath), dfilename)
         vpath = os.path.join(os.path.abspath(dpath), vfilename)
     
