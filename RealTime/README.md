@@ -14,7 +14,8 @@ a. For OSX/Linux Users, open Terminal on your computer. If using Windows, open A
 
 b. Copy the following command into Terminal/AnacondaPrompt, and then hit enter:
 ```
-conda create -y -n ezTrackRT -c conda-forge python=3.8 pandas=1.3.2 matplotlib=3.1.1 numpy=1.22.3 opencv=4.5.3 jupyter=1.0.0 holoviews=1.14.5 scipy=1.7.1 scikit-learn=0.24.2 bokeh=2.3.3 jinja2=3.0.3 pyserial=3.5 tqdm
+conda create -y -n ezTrackRT -c conda-forge python=3.8 pandas=1.3.2 matplotlib=3.1.1 numpy=1.22.3 opencv=4.5.3
+jupyter=1.0.0 holoviews=1.14.5 scipy=1.7.1 scikit-learn=0.24.2 bokeh=2.3.3 jinja2=3.0.3 pyserial=3.5 tqdm
 ```
 
 c. The ezTrack Conda Environment is now installed.
@@ -31,7 +32,8 @@ b. Upload `ArduinoSketch.ino` onto your Arduino
     
     b.2. Go to File -> Open and navigate to ezTrack/RealTime/Arduino/ArduinoSketch/ArduinoSketch.ino
     
-    b.3. Make sure your Arduino is the selected board and the port is also correct (Arduino IDE typically does this automatically).
+    b.3. Make sure your Arduino is the selected board and the port is also correct 
+         (Arduino IDE typically does this automatically).
     
     b.4. Click the upload button to upload `ArduinoSketch.ino` to your Arduino.
 
