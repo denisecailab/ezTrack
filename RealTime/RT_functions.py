@@ -449,8 +449,7 @@ class Video():
 
         """
         
-        display = True
-        while display==True:
+        while True:
             frame = self.frame.copy()
             if show_xy==True and self.track_yx is not None:
                 markposition = (
@@ -464,8 +463,8 @@ class Video():
                 except:
                     pass
             #wait for 'q' key response to exit
-            if (cv2.waitKey(int(1000/self.fps) & 0xFF) == 113):
-                display = False       
+            if (cv2.waitKey(int(1000/self.fps) & 0xFF) == 113) or not self.started:
+                break  
         cv2.destroyAllWindows()
         _=cv2.waitKey(1)
 
