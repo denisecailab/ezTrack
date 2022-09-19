@@ -102,7 +102,7 @@ class Video():
  
     """
 
-    def __init__(self, src=0, scale=None, buffer=10):
+    def __init__(self, color=None, src=0, scale=None, buffer=10):
         
         """ 
         -------------------------------------------------------------------------------------
@@ -113,6 +113,10 @@ class Video():
         Args:
             src:: [int]
                 USB input of camera.
+                
+            color:: [str]
+                Used to select particular channel from color images. Must be set to 'blue',
+                'green', 'red', or None. When None, images converted to grayscale.
 
             scale:: [float, 0<x<=1]
                 Downsampling of each frame, such that 0.3 would result in 30% input size. 
@@ -127,6 +131,10 @@ class Video():
 
             stream:: [cv2.VideoCapture]
                 OpenCV VideoCapture class instance for video.
+                
+            color:: [str]
+                Used to select particular channel from color images. Must be set to 'blue',
+                'green', 'red', or None. When None, images converted to grayscale.
 
             started:: [boolean]
                 Indicates if frames are currently being retrieved. Note that this is distinct
@@ -285,6 +293,7 @@ class Video():
         """
         
         self.stream = cv2.VideoCapture(src)
+        self.color = color
         self.started = False
         self.frame = None
         self.frame_time = None
@@ -481,7 +490,17 @@ class Video():
             ret, frame = self.stream.read() 
             if ret == True:
                 self.frame_time = time.time()
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                if self.color is not None:
+                    if self.color=='blue':
+                        frame = frame[:,:,0]
+                    elif self.color=='green':
+                        frame = frame[:,:,1]
+                    elif self.color=='red':
+                        frame = frame[:,:,2]
+                    else:
+                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                else:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
                 #scale, crop, and mask frame
                 if self.scale != 1:
@@ -1188,7 +1207,7 @@ def hv_baseimage(frame, text=None):
         title=text)
     return image
 
-
+    
 
 def clear_queues(queues):
     
