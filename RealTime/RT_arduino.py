@@ -196,8 +196,8 @@ class Arduino():
                     self.ser.write(cmd)
                 else:
                     hold_tasks.append((ts, cmd))
-                for tsk in hold_tasks:
-                    self.q_tasks.put(tsk)
+            for tsk in hold_tasks:
+                self.q_tasks.put(tsk)
             if self.state=='stopped':
                 for name, pin in self.keys_dout.items():
                     self.digitalLow(pin)
