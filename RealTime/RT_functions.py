@@ -601,8 +601,7 @@ class Video():
             krn_violation =  dif_wirermv.sum()==0
             dif = dif if krn_violation else dif_wirermv
             if krn_violation:
-                print("WARNING: wire_krn too large. Reverting to rmv_wire=False for frame {x}".format(
-                    x= int(cap.get(cv2.CAP_PROP_POS_FRAMES)-1-video_dict['start'])))
+                print("WARNING: wire_krn too large. Reverting to rmv_wire=False for current frame")
         if self.mask is not None:
             if self.mask['mask'] is not None:
                 dif[self.mask['mask']] = 0  
