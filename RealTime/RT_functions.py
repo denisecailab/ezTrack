@@ -486,7 +486,11 @@ class Video():
         while self.started:
             
             #get latest frame
-            ret, frame = self.stream.read() 
+            try:
+                ret, frame = self.stream.read() 
+            except:
+                ret = False
+                
             if ret == True:
                 self.frame_time = time.time()
                 if self.color is not None:
