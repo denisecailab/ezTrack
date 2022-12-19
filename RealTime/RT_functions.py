@@ -881,6 +881,7 @@ class Video():
             vid_dict = pickle.load(pickle_file)   
         self.roi_masks = vid_dict['roi_masks']
         self.roi_names = None if self.roi_masks is None else list(self.roi_masks.keys())
+        self.track_roi = {x : None for x in self.roi_names} if self.roi_names is not None else None
         self.crop_bnds = vid_dict['crop_bnds']
         self.mask = {'mask' : vid_dict['mask']}
         self.scale = vid_dict['scale']
