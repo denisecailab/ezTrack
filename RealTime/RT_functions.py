@@ -5,6 +5,7 @@ LIST OF CLASSES/FUNCTIONS
 Video (Class)
 hv_baseimage
 clear_queues
+euc_dist
 
 """
 
@@ -83,6 +84,7 @@ class Video():
         - scale_h
         - track
         - track_yx
+        - track_dist
         - track_roi
         - track_thresh
         - track_method
@@ -206,6 +208,9 @@ class Video():
 
             track_yx:: [tuple]
                 Indices of center of mass as tuple in the form: (y,x).
+            
+            track_dist::  [float]
+                Euclidean distance of center of mass for frames n and n-1.
 
             track_roi:: [dictionary]
                 Dictionary with Video.roi_names as keys, with corresponding boolean values
@@ -311,6 +316,7 @@ class Video():
         self.scale_h = int(self.scale_orig[1]*self.scale) 
         self.track = False
         self.track_yx = None
+        self.track_dist = None
         self.track_roi = None
         self.track_thresh = 99
         self.track_method = 'abs'
@@ -517,7 +523,9 @@ class Video():
 
                 #track locatiotn
                 if self.track:
+                    track_yx_n1 = self.track_yx
                     self.track_yx = self.locate(self.frame)
+                    self.track_dist = euc_dist(self.track_yx, track_yx_n1)
                     if self.roi_masks is not None:
                         for roi in self.roi_masks.keys():
                             self.track_roi[roi] = self.roi_masks[roi][
@@ -627,9 +635,9 @@ class Video():
         self.dif = dif.copy()
         com = center_of_mass(self.dif)
         return com
-  
-
-
+    
+    
+    
     def crop_define(self):
         
         """ 
@@ -1237,8 +1245,39 @@ def clear_queues(queues):
             except:
                 pass
 
+            
 
-   
+def euc_dist(pos_0, pos_n1, dist=None):
+
+    """ 
+    -------------------------------------------------------------------------------------
+
+    Calculates euclidean distance in pixel units
+
+    -------------------------------------------------------------------------------------
+    Args:
+        pos_0:: [tuple]
+            YX position on current frame
+
+        pos_n1:: [tuple]
+            YX position on previous frame
+
+    -------------------------------------------------------------------------------------
+    Returns:
+        dist:: [float]
+            Distance, in pixel units, between center of mass of prior and current frame
+
+    -------------------------------------------------------------------------------------
+    Notes:
+
+
+    """
+
+    if pos_n1 != None:
+        y_dist = pos_0[0] - pos_n1[0]
+        x_dist = pos_0[1] - pos_n1[1]
+        dist = (y_dist**2 + x_dist**2)**(1/2)
+    return dist
 
         
         
