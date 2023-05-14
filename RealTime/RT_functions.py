@@ -100,6 +100,7 @@ class Video():
         - q_frm
         - q_frmt
         - q_frmyx
+        - q_frmdist
         - q_roi
  
     """
@@ -211,6 +212,19 @@ class Video():
             
             track_dist::  [float]
                 Euclidean distance of center of mass for frames n and n-1.
+                
+            track_dist_cnvsn:: [dict]
+                Dictionary with the following keys:
+                    'name' : Desired name of scale (e.g. 'cm')
+                    
+                    'dist' : Distance between the points to be drawn, in the desired scale.
+                    
+                    'dist_px' : Euclidean distance between two reference points, in pixel units, 
+                            rounded to thousandth. Returns None if no less than 2 points have 
+                            been selected.
+                            
+                    'dist_fctr' : Factor by which to multiple pixel distance for conversion
+                            to desired scale.
 
             track_roi:: [dictionary]
                 Dictionary with Video.roi_names as keys, with corresponding boolean values
@@ -288,6 +302,9 @@ class Video():
                 
             q_frmyx:: [multiprocessing.Queue]
                 Queue of video frame positions.  Used for saving.
+            
+            q_frmdist:: [multiprocessing.Queue]
+                Queue of video frame distances.  Used for saving.
                 
             q_roi:: [multiprocessing.Queue]
                 Queue of ROI state.  Used for saving.
@@ -317,6 +334,7 @@ class Video():
         self.track = False
         self.track_yx = None
         self.track_dist = None
+        self.track_dist_cnvsn = dict(name=None, dist=None, dist_px=None, dist_fctr=None)
         self.track_roi = None
         self.track_thresh = 99
         self.track_method = 'abs'
@@ -334,6 +352,7 @@ class Video():
         self.q_frm = multiprocessing.Queue(buffer)
         self.q_frmt = multiprocessing.Queue(buffer)
         self.q_frmyx = multiprocessing.Queue(buffer)
+        self.q_frmdist = multiprocessing.Queue(buffer)
         self.q_roi = multiprocessing.Queue(buffer)
 
         
@@ -533,13 +552,14 @@ class Video():
                             ]
 
                 #add frame info to video queues
-                for q in [self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi]:
+                for q in [self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi, self.q_frmdist]:
                     if q.full():
                         q.get()
                 self.q_frm.put(self.frame) 
                 self.q_frmt.put(self.frame_time)
                 if self.track:
                     self.q_frmyx.put(self.track_yx)
+                    self.q_frmdist.put(self.track_dist)
                     self.q_roi.put(self.track_roi)
 
             
@@ -566,7 +586,7 @@ class Video():
         
         samples = int(secs*self.fps)
         
-        clear_queues([self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi])
+        clear_queues([self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi, self.q_frmdist])
         
         for smpl in np.arange(samples):
             frame  = self.q_frm.get()
@@ -833,7 +853,70 @@ class Video():
             return image * poly * dmap
         else:
             return image
+    
+    
+    
+    def distance_define(self, name=None, dist=None):    
         
+        """ 
+        -------------------------------------------------------------------------------------
+
+        Creates interactive tool for measuring length between two points, in pixel units, in 
+        order to ease process of converting pixel distance measurements to some other scale.
+        Use point drawing tool to calculate distance between any two points.
+
+        -------------------------------------------------------------------------------------
+        args:
+            name:: [str]
+                Desired name of scale (e.g. 'cm')
+                
+            dist:: [numeric]
+                The distance between the points to be drawn, in the desired scale.
+        
+        -------------------------------------------------------------------------------------
+        Returns:
+            image:: [holoviews.Overlay]
+                Reference frame that can be drawn upon to define 2 points, the distance 
+                between which will be measured and displayed.
+
+        -------------------------------------------------------------------------------------
+        Notes:
+            
+            Can only be used within Jupyter.
+
+        """
+        
+        self.track_dist_cnvsn['name'], self.track_dist_cnvsn['dist'] = name, dist
+        
+        #Make base image on which to draw
+        image = hv_baseimage(
+            frame = self.frame,
+            text = "Draw Regions to be Excluded"
+        )
+
+        #Create Point instance on which to draw and connect via stream to pointDraw drawing tool 
+        points = hv.Points([]).opts(active_tools=['point_draw'], color='red',size=10)
+        pointDraw_stream = streams.PointDraw(source=points, num_objects=2) 
+
+        def markers(data, distance):
+            try:
+                x_ls, y_ls = data['x'], data['y']
+            except TypeError:
+                x_ls, y_ls = [], []
+
+            x_ctr, y_ctr = (np.mean(x_ls), np.mean(y_ls)) if len(x_ls)>0 else (None, None)
+            if len(x_ls) > 1:
+                x_dist = (x_ls[0] - x_ls[1])
+                y_dist = (y_ls[0] - y_ls[1])
+                distance['dist_px'] = np.around( (x_dist**2 + y_dist**2)**(1/2), 3)
+                distance['dist_fctr'] = distance['dist']/distance['dist_px']
+                text = "{dist} px".format(dist=distance['dist_px'])
+            return hv.Labels((x_ctr, y_ctr, text if len(x_ls) > 1 else "")).opts(
+                text_color='blue',text_font_size='14pt')
+        markers_ptl = fct.partial(markers, distance=self.track_dist_cnvsn)
+        dmap = hv.DynamicMap(markers_ptl, streams=[pointDraw_stream])
+        return (image * points * dmap)
+    
     
     
     def params_save(self, file=None): 
@@ -974,6 +1057,7 @@ class Video():
                 self.q_frm,
                 self.q_frmt,
                 self.q_frmyx,
+                self.q_frmdist,
                 self.q_roi,
                 self.frame.copy().shape[1], 
                 self.frame.copy().shape[0],
@@ -1029,7 +1113,7 @@ class Video():
     @staticmethod
     def writer_writer(
         save_vid, save_csv, cpath, vpath, compression, fps, roi_names, 
-        q_frm, q_frmt, q_frmyx, q_roi, scale_w, scale_h, 
+        q_frm, q_frmt, q_frmyx, q_frmdist, q_roi, scale_w, scale_h, 
         initsig, startsig, stopsig, emptyq, complete, track
     ):
         
@@ -1075,6 +1159,9 @@ class Video():
                 
             q_frmyx:: [multiprocessing.Queue]
                 Queue of video frame positions.  Used for saving.
+                
+            q_frmdist:: [multiprocessing.Queue]
+                Queue of video frame distances.  Used for saving.
                 
             q_roi:: [multiprocessing.Queue]
                 Queue of ROI state.  Used for saving.
@@ -1129,7 +1216,7 @@ class Video():
         #initialize video and csv
         dkeys = ['frame_time']
         if track:
-            dkeys = dkeys + ['y', 'x']
+            dkeys = dkeys + ['y', 'x', 'dist_px']
             dkeys = dkeys if roi_names is None else dkeys + roi_names
         if save_vid:
             writer = cv2.VideoWriter(
@@ -1148,7 +1235,7 @@ class Video():
             time.sleep(.01)            
             if stopsig.is_set():
                 break
-        clear_queues([q_frm, q_frmt, q_frmyx, q_roi])         
+        clear_queues([q_frm, q_frmt, q_frmyx, q_frmdist, q_roi])         
         
         #write data
         while not stopsig.is_set() or emptyq.is_set():
@@ -1157,10 +1244,12 @@ class Video():
                 frame = q_frm.get(timeout=1/fps)
                 dcsv['frame_time'] = q_frmt.get(timeout=1/fps)
                 if track:
-                    frame_yx = q_frmyx.get(timeout=1/fps)  
+                    frame_yx = q_frmyx.get(timeout=1/fps)
+                    frame_dist = q_frmdist.get(timeout=1/fps)  
                     roi = q_roi.get(timeout=1/fps) if roi_names is not None else None
                 if save_csv:
                     dcsv['y'], dcsv['x'] = frame_yx if track else (None, None)
+                    dcsv['dist_px'] = frame_dist
                     dcsv.update(roi) if (track and roi_names is not None) else None
                     pd.DataFrame(
                         {k:v for k,v in dcsv.items() if k in dkeys},
