@@ -544,7 +544,11 @@ class Video():
                 if self.track:
                     track_yx_n1 = self.track_yx
                     self.track_yx = self.locate(self.frame)
-                    self.track_dist = euc_dist(self.track_yx, track_yx_n1)
+                    self.track_dist = euc_dist(
+                        self.track_yx, 
+                        track_yx_n1, 
+                        self.track_dist_cnvsn['dist_fctr']
+                    )
                     if self.roi_masks is not None:
                         for roi in self.roi_masks.keys():
                             self.track_roi[roi] = self.roi_masks[roi][
@@ -1056,6 +1060,7 @@ class Video():
                 compression,
                 fps,
                 self.roi_names,
+                self.track_dist_cnvsn,
                 self.q_frm,
                 self.q_frmt,
                 self.q_frmyx,
@@ -1114,7 +1119,7 @@ class Video():
         
     @staticmethod
     def writer_writer(
-        save_vid, save_csv, cpath, vpath, compression, fps, roi_names, 
+        save_vid, save_csv, cpath, vpath, compression, fps, roi_names, track_dist_cnvsn,
         q_frm, q_frmt, q_frmyx, q_frmdist, q_roi, scale_w, scale_h, 
         initsig, startsig, stopsig, emptyq, complete, track
     ):
@@ -1151,6 +1156,19 @@ class Video():
                 
             roi_names:: [list]
                 List of region of interest names.
+                
+            track_dist_cnvsn:: [dict]
+                Dictionary with the following keys:
+                    'name' : Desired name of scale (e.g. 'cm')
+                    
+                    'dist' : Distance between the points to be drawn, in the desired scale.
+                    
+                    'dist_px' : Euclidean distance between two reference points, in pixel units, 
+                            rounded to thousandth. Returns None if no less than 2 points have 
+                            been selected.
+                            
+                    'dist_fctr' : Factor by which to multiple pixel distance for conversion
+                            to desired scale.
                 
             q_frm:: [multiprocessing.Queue]
                 Queue of video frames.  Used for reference creation
@@ -1218,7 +1236,11 @@ class Video():
         #initialize video and csv
         dkeys = ['frame_time']
         if track:
-            dkeys = dkeys + ['y', 'x', 'dist_px']
+            dist_col = 'dist_{m}'.format(
+                m = track_dist_cnvsn['name'] if (
+                    track_dist_cnvsn['name']!=None and track_dist_cnvsn['dist_fctr']!=None
+                ) else 'px')
+            dkeys = dkeys + ['y', 'x', dist_col]
             dkeys = dkeys if roi_names is None else dkeys + roi_names
         if save_vid:
             writer = cv2.VideoWriter(
@@ -1251,7 +1273,7 @@ class Video():
                     roi = q_roi.get(timeout=1/fps) if roi_names is not None else None
                 if save_csv:
                     dcsv['y'], dcsv['x'] = frame_yx if track else (None, None)
-                    dcsv['dist_px'] = frame_dist
+                    dcsv[dist_col] = frame_dist if track else None
                     dcsv.update(roi) if (track and roi_names is not None) else None
                     pd.DataFrame(
                         {k:v for k,v in dcsv.items() if k in dkeys},
@@ -1340,12 +1362,13 @@ def clear_queues(queues):
 
             
 
-def euc_dist(pos_0, pos_n1, dist=None):
+def euc_dist(pos_0, pos_n1, cnvsn=None, dist=None):
 
     """ 
     -------------------------------------------------------------------------------------
 
-    Calculates euclidean distance in pixel units
+    Calculates euclidean distance.  Converted from pixel units to other metric if 
+    cnvsn supplied.
 
     -------------------------------------------------------------------------------------
     Args:
@@ -1354,6 +1377,10 @@ def euc_dist(pos_0, pos_n1, dist=None):
 
         pos_n1:: [tuple]
             YX position on previous frame
+            
+        cnvsn:: [numeric]
+            Number by which to multiple distance to convert from pixeul units to desired
+            scale. 
 
     -------------------------------------------------------------------------------------
     Returns:
@@ -1370,6 +1397,7 @@ def euc_dist(pos_0, pos_n1, dist=None):
         y_dist = pos_0[0] - pos_n1[0]
         x_dist = pos_0[1] - pos_n1[1]
         dist = (y_dist**2 + x_dist**2)**(1/2)
+        dist = dist if cnvsn is None else dist*cnvsn
     return dist
 
         
