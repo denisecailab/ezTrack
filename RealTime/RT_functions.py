@@ -1038,7 +1038,7 @@ class Video():
 
         """
         
-        t = datetime.datetime.fromtimestamp(time.time()).strftime("%Y%M%d_%H%M%S")
+        t = datetime.datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
         if dfilename is None:
             dfilename = '.'.join([t, '.csv'])
         if vfilename is None:
@@ -1263,6 +1263,8 @@ class Video():
                 if emptyq.is_set():
                     break
                 pass
+        
+        
         
         #close out
         time.sleep(.1)
