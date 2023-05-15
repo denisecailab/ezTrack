@@ -942,7 +942,8 @@ class Video():
             'roi_masks' : self.roi_masks,
             'crop_bnds' : None if self.crop_bnds is None else self.crop_bnds.data,
             'mask' : None if self.mask is None else self.mask['mask'],
-            'scale' : self.scale
+            'scale' : self.scale,
+            'track_dist_cnvsn' : self.track_dist_cnvsn
         }
         with open(file, 'wb') as pickle_file:
             pickle.dump(vid_dict, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
@@ -973,6 +974,7 @@ class Video():
         self.roi_masks = vid_dict['roi_masks']
         self.roi_names = None if self.roi_masks is None else list(self.roi_masks.keys())
         self.track_roi = {x : None for x in self.roi_names} if self.roi_names is not None else None
+        self.track_dist_cnvsn = vid_dict['track_dist_cnvsn']
         self.crop_bnds = vid_dict['crop_bnds']
         self.mask = {'mask' : vid_dict['mask']}
         self.scale = vid_dict['scale']
