@@ -1271,10 +1271,10 @@ class Video():
                     frame_yx = q_frmyx.get(timeout=1/fps)
                     frame_dist = q_frmdist.get(timeout=1/fps)  
                     roi = q_roi.get(timeout=1/fps) if roi_names is not None else None
-                if save_csv:
                     dcsv['y'], dcsv['x'] = frame_yx if track else (None, None)
                     dcsv[dist_col] = frame_dist if track else None
                     dcsv.update(roi) if (track and roi_names is not None) else None
+                if save_csv:
                     pd.DataFrame(
                         {k:v for k,v in dcsv.items() if k in dkeys},
                         index=[0]
