@@ -895,7 +895,7 @@ class Video():
         #Make base image on which to draw
         image = hv_baseimage(
             frame = self.frame,
-            text = "Draw Regions to be Excluded"
+            text = "Select 2 points of known distance"
         )
 
         #Create Point instance on which to draw and connect via stream to pointDraw drawing tool 
