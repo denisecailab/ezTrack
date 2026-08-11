@@ -1044,12 +1044,21 @@ class Video():
         
         t = datetime.datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
         if dfilename is None:
-            dfilename = '.'.join([t, '.csv'])
+            dfilename = '.'.join([t, 'csv'])
         if vfilename is None:
-            vfilename = '.'.join([t, '.avi'])
+            vfilename = '.'.join([t, 'avi'])
         cpath = os.path.join(os.path.abspath(dpath), dfilename)
         vpath = os.path.join(os.path.abspath(dpath), vfilename)
-    
+
+        #make sure multiprocessing events are cleared before initiating
+        #necessary if recording multiple sessions without restarting kernel
+        self.writer_initiated.clear(),
+        self.writer_startsig.clear(),
+        self.writer_stopsig.clear(),
+        self.writer_emptyq.clear(),
+        self.writer_complete.clear(),
+
+        #initiate process
         multiprocessing.Process(
             target=self.writer_writer,
             args=(
