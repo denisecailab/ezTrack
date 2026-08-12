@@ -110,6 +110,7 @@ class Video():
         - freeze_state
         - freeze_motion_thresh
         - freeze
+        - q_fz
  
     """
 
@@ -321,7 +322,7 @@ class Video():
                 Specifies the method used to calculate freezing.
                 Set to 'distance' to calculate freezing based on center-of-mass movement,
                 'pixel' to calculate freezing based on pixel fluctuations,
-                or None if freezing is not being calculated. 
+                or None if freezing is not being calculated.
 
             freeze_buffer:: [list]
                 Stores recent freezing-related values, with one value for each frame retained
@@ -330,18 +331,18 @@ class Video():
                 method. These values are used to determine the current freezing state.
 
             freeze_buffer_size:: [unsigned integer]
-                Number of values retained in Video.freeze_buffer. 
-  
+                Number of values retained in Video.freeze_buffer.
+
             freeze_thresh:: [float]
                 Threshold used to determine whether the animal is freezing based on the
-                values in Video.freeze_buffer. 
+                values in Video.freeze_buffer.
 
             freeze_thresh_method:: [string]
                 Specifies how values in Video.freeze_buffer are evaluated against
-                Video.freeze_thresh. Can be set to 'max' or 'mean'. 
+                Video.freeze_thresh. Can be set to 'max' or 'mean'.
 
             freeze_state:: [bool]
-                Indicates whether the animal is currently classified as freezing. 
+                Indicates whether the animal is currently classified as freezing.
 
             freeze_motion_thresh:: [float]
                 Threshold used to distinguish animal movement from small pixel fluctuations
@@ -351,7 +352,10 @@ class Video():
 
             freeze:: [bool]
                 Set to True to initiate freezing analysis.
-                Video.started should be True before freezing analysis is begun. 
+                Video.started should be True before freezing analysis is begun.
+
+            q_fz:: [multiprocessing.Queue]
+                Queue of freezing states. Used for saving.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -398,8 +402,15 @@ class Video():
         self.q_frmyx = multiprocessing.Queue(buffer)
         self.q_frmdist = multiprocessing.Queue(buffer)
         self.q_roi = multiprocessing.Queue(buffer)
-
-        
+        self.freeze_method = None 
+        self.freeze_buffer = [] 
+        self.freeze_buffer_size = None
+        self.freeze_thresh = None
+        self.freeze_thresh_method = None
+        self.freeze_state = False 
+        self.freeze_motion_thresh = None
+        self.freeze = False
+        self.q_fz = multiprocessing.Queue(buffer)
 
     def scale_set(self, scale=1):
         
@@ -544,14 +555,16 @@ class Video():
         """ 
         -------------------------------------------------------------------------------------
 
-        Function executed in thread under Video.start to iteratively retrieve frames and 
-        track animal (if Video.track is True).
+        Function executed in thread under Video.start to iteratively retrieve frames, 
+        track the animal (if Video.track is True), and calculate freezing 
+        (if Video.freeze is True).
 
         -------------------------------------------------------------------------------------
         Notes:
 
         """
-        
+        previous_frame = None
+
         while self.started:
             
             #get latest frame
@@ -599,8 +612,36 @@ class Video():
                                 int(self.track_yx[0]), int(self.track_yx[1])
                             ]
 
+                if self.freeze:
+                    # calculate freezing using the distance-based method
+                    if self.freeze_method == 'distance':
+                        if track_yx_n1 is not None:
+                            self.freeze_buffer.append(self.track_dist)
+                            if len(self.freeze_buffer) > self.freeze_buffer_size:
+                                self.freeze_buffer.pop(0)
+                            if self.freeze_thresh_method == 'max':
+                                freeze_value = max(self.freeze_buffer)
+                            elif self.freeze_thresh_method == 'mean':
+                                freeze_value = np.mean(self.freeze_buffer)
+                            self.freeze_state = freeze_value < self.freeze_thresh
+
+                    # calculate freezimg using the pixel-based method
+                    elif self.freeze_method == 'pixel':
+                        if previous_frame is not None:
+                            pixel_diff = np.abs(self.frame.astype(float) - previous_frame.astype(float))
+                            pixel_diff[pixel_diff < self.freeze_motion_thresh] = 0
+                            pixel_value = np.mean(pixel_diff)
+                            self.freeze_buffer.append(pixel_value)
+                            if len(self.freeze_buffer) > self.freeze_buffer_size:
+                                self.freeze_buffer.pop(0)
+                            if self.freeze_thresh_method == 'max':
+                                freeze_value = max(self.freeze_buffer)
+                            elif self.freeze_thresh_method == 'mean':
+                                freeze_value = np.mean(self.freeze_buffer)
+                            self.freeze_state = freeze_value < self.freeze_thresh
+
                 #add frame info to video queues
-                for q in [self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi, self.q_frmdist]:
+                for q in [self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi, self.q_frmdist, self.q_fz]:
                     if q.full():
                         q.get()
                 self.q_frm.put(self.frame) 
@@ -609,8 +650,10 @@ class Video():
                     self.q_frmyx.put(self.track_yx)
                     self.q_frmdist.put(self.track_dist)
                     self.q_roi.put(self.track_roi)
+                if self.freeze:
+                    self.q_fz.put(self.freeze_state)
 
-            
+                previous_frame = self.frame.copy()
             
     def ref_create(self, print_sts=True, secs=5):
         
