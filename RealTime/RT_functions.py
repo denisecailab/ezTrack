@@ -102,6 +102,14 @@ class Video():
         - q_frmyx
         - q_frmdist
         - q_roi
+        - freeze_method
+        - freeze_buffer
+        - freeze_buffer_size
+        - freeze_thresh
+        - freeze_thresh_method
+        - freeze_state
+        - freeze_motion_thresh
+        - freeze
  
     """
 
@@ -308,6 +316,42 @@ class Video():
                 
             q_roi:: [multiprocessing.Queue]
                 Queue of ROI state.  Used for saving.
+
+            freeze_method:: [string or None]
+                Specifies the method used to calculate freezing.
+                Set to 'distance' to calculate freezing based on center-of-mass movement,
+                'pixel' to calculate freezing based on pixel fluctuations,
+                or None if freezing is not being calculated. 
+
+            freeze_buffer:: [list]
+                Stores recent freezing-related values, with one value for each frame retained
+                in the buffer. Values represent center-of-mass movement when using the
+                distance freezing method or pixel fluctuations when using the pixel freezing
+                method. These values are used to determine the current freezing state.
+
+            freeze_buffer_size:: [unsigned integer]
+                Number of values retained in Video.freeze_buffer. 
+  
+            freeze_thresh:: [float]
+                Threshold used to determine whether the animal is freezing based on the
+                values in Video.freeze_buffer. 
+
+            freeze_thresh_method:: [string]
+                Specifies how values in Video.freeze_buffer are evaluated against
+                Video.freeze_thresh. Can be set to 'max' or 'mean'. 
+
+            freeze_state:: [bool]
+                Indicates whether the animal is currently classified as freezing. 
+
+            freeze_motion_thresh:: [float]
+                Threshold used to distinguish animal movement from small pixel fluctuations
+                caused by background noise. When using the pixel freezing method, pixel
+                fluctuations below this value are treated as background noise rather than
+                movement.
+
+            freeze:: [bool]
+                Set to True to initiate freezing analysis.
+                Video.started should be True before freezing analysis is begun. 
 
         -------------------------------------------------------------------------------------
         Notes:
