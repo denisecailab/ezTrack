@@ -1,4 +1,3 @@
-#include "Adafruit_MPR121.h"
 #include "src/GenericSerial/GenericSerial.h"
 
 #define BAUDRATE 115200

@@ -982,7 +982,7 @@ class Video():
         #Make base image on which to draw
         image = hv_baseimage(
             frame = self.frame,
-            text = "Draw Regions to be Excluded"
+            text = "Select 2 points of known distance"
         )
 
         #Create Point instance on which to draw and connect via stream to pointDraw drawing tool 
@@ -1083,7 +1083,8 @@ class Video():
         dfilename = None,
         vfilename = None, 
         compression = "MJPG", 
-        fps=30
+        fps=30,
+        overwrite = False
     ):
         
         """ 
@@ -1119,6 +1120,9 @@ class Video():
             
             fps:: [int]
                 FPS written to codec.  May only except certain values.
+            
+            overwrite:: [bool]
+                Whether to permit overwriting of existing file
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -1131,12 +1135,27 @@ class Video():
         
         t = datetime.datetime.fromtimestamp(time.time()).strftime("%Y%m%d_%H%M%S")
         if dfilename is None:
-            dfilename = '.'.join([t, '.csv'])
+            dfilename = '.'.join([t, 'csv'])
         if vfilename is None:
-            vfilename = '.'.join([t, '.avi'])
+            vfilename = '.'.join([t, 'avi'])
         cpath = os.path.join(os.path.abspath(dpath), dfilename)
         vpath = os.path.join(os.path.abspath(dpath), vfilename)
-    
+
+        if not overwrite:
+            if os.path.isfile(cpath):
+                raise FileExistsError(f"'{cpath}' already exists. Change filename or set overwrite to True")
+            if os.path.isfile(vpath):
+                raise FileExistsError(f"'{vpath}' already exists. Change filename or set overwrite to True")
+
+        #make sure multiprocessing events are cleared before initiating
+        #necessary if recording multiple sessions without restarting kernel
+        self.writer_initiated.clear(),
+        self.writer_startsig.clear(),
+        self.writer_stopsig.clear(),
+        self.writer_emptyq.clear(),
+        self.writer_complete.clear(),
+
+        #initiate process
         multiprocessing.Process(
             target=self.writer_writer,
             args=(
