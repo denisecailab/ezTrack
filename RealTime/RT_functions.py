@@ -996,7 +996,8 @@ class Video():
         dfilename = None,
         vfilename = None, 
         compression = "MJPG", 
-        fps=30
+        fps=30,
+        overwrite = False
     ):
         
         """ 
@@ -1032,6 +1033,9 @@ class Video():
             
             fps:: [int]
                 FPS written to codec.  May only except certain values.
+            
+            overwrite:: [bool]
+                Whether to permit overwriting of existing file
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -1049,6 +1053,12 @@ class Video():
             vfilename = '.'.join([t, 'avi'])
         cpath = os.path.join(os.path.abspath(dpath), dfilename)
         vpath = os.path.join(os.path.abspath(dpath), vfilename)
+
+        if not overwrite:
+            if os.path.isfile(cpath):
+                raise FileExistsError(f"'{cpath}' already exists. Change filename or set overwrite to True")
+            if os.path.isfile(vpath):
+                raise FileExistsError(f"'{vpath}' already exists. Change filename or set overwrite to True")
 
         #make sure multiprocessing events are cleared before initiating
         #necessary if recording multiple sessions without restarting kernel
