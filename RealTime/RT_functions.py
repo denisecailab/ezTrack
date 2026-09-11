@@ -34,7 +34,7 @@ class Video():
     """ 
     -------------------------------------------------------------------------------------
     
-    Base container for holding video stream, tracking paramaters, and video read/write
+    Base container for holding video stream, tracking/freezing paramaters, and video read/write
     methods.
     
     Of note, data/video saving/writing is completed in separate process 
@@ -53,6 +53,8 @@ class Video():
         - get_frames
         - ref_create
         - locate
+        - get_motion
+        - track_freeze_set
         - crop_define
         - crop_cropframe
         - mask_define
@@ -67,11 +69,13 @@ class Video():
     Attributes (see __init__ for details):
     
         - stream
+        - color
         - started
         - frame
         - frame_time
         - ref
-        - dif
+        - track_dif
+        - freeze_dif
         - params_loaded
         - crp_bnds
         - mask
@@ -85,6 +89,7 @@ class Video():
         - track
         - track_yx
         - track_dist
+        - track_dist_cnvsn
         - track_roi
         - track_thresh
         - track_method
@@ -94,24 +99,28 @@ class Video():
         - track_window_reset
         - track_rmvwire
         - track_rmvwire_krn
+        - freeze
+        - freeze_state
+        - freeze_thresh
+        - freeze_method
+        - freeze_mtthresh_method
+        - freeze_mtthresh_thresh
+        - freeze_mtbuffer
+        - freeze_mtbuffer_sz
+        - freeze_mtbuffer_reset
+        - writer_initiated
         - writer_startsig
-        - writer_startsig
+        - writer_stopsig
+        - writer_emptyq
         - writer_complete
         - q_frm
         - q_frmt
         - q_frmyx
         - q_frmdist
         - q_roi
-        - freeze_method
-        - freeze_buffer
-        - freeze_buffer_size
-        - freeze_thresh
-        - freeze_thresh_method
-        - freeze_state
-        - freeze_motion_thresh
-        - freeze
         - q_fz
- 
+        - q_mt
+
     """
 
     def __init__(self, color=None, src=0, scale=None, buffer=10):
@@ -135,8 +144,8 @@ class Video():
                 Uses OpenCV INTER_NEAREST method. If no downsampling can be set to None.
 
             buffer:: [unsigned integer]
-                Max size of queues, the buffer used to synchronize frames in main tracking 
-                process with data/video writer process.
+                Max size of queues, the buffer used to synchronize frames in main tracking/
+                freezing process with data/video writer process.
                 
         -------------------------------------------------------------------------------------        
         Attributes:
@@ -150,7 +159,8 @@ class Video():
 
             started:: [boolean]
                 Indicates if frames are currently being retrieved. Note that this is distinct
-                from Video.track, which indicates whether tracking is ongoing.
+                from Video.track, which indicates whether tracking is ongoing, or Video.freeze,
+                which indicates whether freezing analysis is ongoing.
 
             frame:: [array]
                 The most recently captured frame. Note that because this is continuously
@@ -161,11 +171,18 @@ class Video():
 
             ref:: [array]
                 Reference frame composed of field of view without animal, necessary for 
-                tracking. See Video.ref_create for details.  Same shape as Video.frame.
+                tracking. Also used for the distance freezing method. See Video.ref_create
+                for details. Same shape as Video.frame.
                 
-            dif:: [array]
+            track_dif:: [array]
                 The features of the most recently captured frame used for tracking.
-                Conceptually, dif = frame - ref, but read tracking params below for details.
+                Also used for the distance freezing method. Conceptually,
+                track_dif = frame - ref, but read tracking params below for details.
+
+            freeze_dif:: [array]
+                The features of the most recently captured frame used for the pixel freezing
+                method. Conceptually, freeze_dif = current_frame - previous_frame, but read
+                freezing params below for details.
 
             params_loaded:: [bool]
                 Indicates whether parameters have been loaded from a file using
@@ -176,14 +193,14 @@ class Video():
                 is to be performed.  Can be drawn in Jupyter Notebook using Video.crop_define,
                 subsequently saved using Video.params_save, and then loaded using
                 Video.params_load.  To set this manually Video.params_loaded will also need to 
-                be set to True.  When defined manualy, Video.crp_bnds should be a dictionary 
+                be set to True.  When defined manually, Video.crp_bnds should be a dictionary 
                 with the following keys: ['x0', 'x1', 'y0', 'y1'], and each value should be a 
                 list of length 1.  
                 For example "Video.crp_bnds = dict(x0=[5], x1=[500], y0=[10], y1=[300])"
 
             mask:: [bool array]
-                Boolean numpy array identifying regions to exclude from tracking.  Should 
-                be same dimensions as Video.frame.
+                Boolean numpy array identifying regions to exclude from tracking/freezing. 
+                Should be same dimensions as Video.frame.
 
             roi_names:: [list]
                 List of region of interest names.
@@ -208,12 +225,13 @@ class Video():
                 Width of frame, pre-cropping, including any applied downsampling. 
                 Set by Video.scale_set()
 
-            scale_h:: [type]
+            scale_h:: [int]
                 Height of frame, pre-cropping, including any applied downsampling.
                 Set by Video.scale_set()
                 
             track:: [bool]
-                Set to True to initiate tracking. Video.started should be True before
+                Set to True to initiate tracking. Automatically set to True for the 
+                distance freezing method. Video.started should be True before
                 tracking is begun.
 
             track_yx:: [tuple]
@@ -229,10 +247,10 @@ class Video():
                     'dist' : Distance between the points to be drawn, in the desired scale.
                     
                     'dist_px' : Euclidean distance between two reference points, in pixel units, 
-                            rounded to thousandth. Returns None if no less than 2 points have 
+                            rounded to thousandth. Returns None if less than 2 points have 
                             been selected.
                             
-                    'dist_fctr' : Factor by which to multiple pixel distance for conversion
+                    'dist_fctr' : Factor by which to multiply pixel distance for conversion
                             to desired scale.
 
             track_roi:: [dictionary]
@@ -240,7 +258,7 @@ class Video():
                 indicating if animal is in each ROI.
 
             track_thresh:: [float between 0-100]
-                Percentile of difference values below which are set to 0. After calculating 
+                Percentile of difference values below which pixels are set to 0. After calculating 
                 pixel-wise difference between passed frame and reference frame, these values 
                 are thresholded to make subsequent defining of center of mass more reliable. 
 
@@ -255,26 +273,77 @@ class Video():
                 surrounding animal's location on previous frame to be more heavily influential
                 in determining animal's current location. After finding pixel-wise difference 
                 between passed frame and reference frame, difference values outside square window
-                of prior location will be multiplied by (1 - window_weight), reducing their 
-                overall influence. [bool]
+                of prior location will be multiplied by (1 - track_window_wt), reducing their 
+                overall influence.
 
             track_window_sz:: [unsigned integer]
-                If `use_window=True`, the length of one side of square window, in pixels.
+                If `track_window_use=True`, the length of one side of square window, in pixels.
 
             track_window_wt:: [float between 0-1]
                 0-1 scale for window, if used, where 1 is maximal weight of window surrounding 
                 prior location. 
-                
+
             track_window_reset:: [bool]
                 When set to True, window will not be used on tracking of next tracked frame,
                 permitting the window position to be reset.
-
+                
             track_rmvwire:: [bool]
                 True/False, indicating whether to use wire removal function. 
 
             track_rmvwire_krn:: [unsigned integer]
                 Size of kernel used for morphological opening to remove wire.
                 Should be larger than wire and smaller than animal.
+
+            freeze:: [bool]
+                Set to True to initiate freezing analysis. Video.started should be
+                True before freezing analysis is begun.                
+
+            freeze_state:: [bool]
+                Indicates whether the animal is currently classified as freezing.
+
+            freeze_thresh:: [float]
+                Threshold used to determine whether the animal is freezing based on the
+                values in Video.freeze_mtbuffer.
+
+            freeze_method:: [string]
+                Specifies the method used to calculate freezing. Set to 'distance' to
+                calculate freezing based on center-of-mass movement or 'pixel' to calculate
+                freezing based on pixel fluctuations. The distance method infers movement
+                from differences in the animal's center-of-mass position between consecutive
+                frames. The pixel method infers movement from pixel fluctuations that exceed
+                Video.freeze_mtthresh_thresh between consecutive frames. The pixel method may
+                be more sensitive to small fluctuations in movement and was used for freezing
+                analysis in the original version of ezTrack.
+                
+            freeze_mtthresh_method:: [string]
+                Specifies how values in Video.freeze_mtbuffer are evaluated against
+                Video.freeze_thresh. Can be set to 'max', which uses the largest value in
+                the buffer, or 'mean', which uses the average value of the buffer.
+
+            freeze_mtthresh_thresh:: [float]
+                Threshold used to distinguish animal movement from small pixel fluctuations
+                caused by background noise. When using the pixel freezing method, pixel
+                fluctuations below this value are treated as background noise rather than
+                movement.
+
+            freeze_mtbuffer:: [list]
+                Stores recent motion values, with one value for each frame retained
+                in the buffer. Values represent center-of-mass movement when using the
+                distance freezing method or pixel fluctuations when using the pixel freezing
+                method. These values are used to determine the current freezing state.
+
+            freeze_mtbuffer_sz:: [unsigned integer]
+                Number of values retained in Video.freeze_mtbuffer. A larger value uses
+                motion values over a longer period of time when determining freezing, while a
+                smaller value uses motion values over a shorter period of time when
+                determining freezing. For example, if Video.freeze_mtbuffer_sz is set to 30
+                and video frames are acquired at 30 FPS, then the animal's freezing state
+                will be determined from motion values of the previous 30 frames,
+                corresponding to the previous 1 second.
+
+            freeze_mtbuffer_reset:: [bool]
+                When set to True, Video.freeze_mtbuffer will be reset before the next motion
+                calculation, after which the value is set back to False.
                 
             writer_initiated:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
@@ -289,9 +358,9 @@ class Video():
                 Multiprocessing event used to coordinate with writer process.
                 Used to stop writer after initiation and can be used to
                 query state of writer. Safest to invoke with vid.stop,
-                or vid.release, which will sotp writer and clear queues. 
+                or vid.release, which will stop writer and clear queues. 
                 Self.writer_stop will similarly stop writing, but will not
-                clear queus.
+                clear queues.
                 
             writer_emptyq:: [multiprocessing.Event]
                 Multiprocessing event used to coordinate with writer process.
@@ -318,44 +387,11 @@ class Video():
             q_roi:: [multiprocessing.Queue]
                 Queue of ROI state.  Used for saving.
 
-            freeze_method:: [string or None]
-                Specifies the method used to calculate freezing.
-                Set to 'distance' to calculate freezing based on center-of-mass movement,
-                'pixel' to calculate freezing based on pixel fluctuations,
-                or None if freezing is not being calculated.
-
-            freeze_buffer:: [list]
-                Stores recent freezing-related values, with one value for each frame retained
-                in the buffer. Values represent center-of-mass movement when using the
-                distance freezing method or pixel fluctuations when using the pixel freezing
-                method. These values are used to determine the current freezing state.
-
-            freeze_buffer_size:: [unsigned integer]
-                Number of values retained in Video.freeze_buffer.
-
-            freeze_thresh:: [float]
-                Threshold used to determine whether the animal is freezing based on the
-                values in Video.freeze_buffer.
-
-            freeze_thresh_method:: [string]
-                Specifies how values in Video.freeze_buffer are evaluated against
-                Video.freeze_thresh. Can be set to 'max' or 'mean'.
-
-            freeze_state:: [bool]
-                Indicates whether the animal is currently classified as freezing.
-
-            freeze_motion_thresh:: [float]
-                Threshold used to distinguish animal movement from small pixel fluctuations
-                caused by background noise. When using the pixel freezing method, pixel
-                fluctuations below this value are treated as background noise rather than
-                movement.
-
-            freeze:: [bool]
-                Set to True to initiate freezing analysis.
-                Video.started should be True before freezing analysis is begun.
-
             q_fz:: [multiprocessing.Queue]
                 Queue of freezing states. Used for saving.
+
+            q_mt:: [multiprocessing.Queue]
+                Queue of motion values. Used for saving.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -368,7 +404,8 @@ class Video():
         self.frame = None
         self.frame_time = None
         self.ref = None
-        self.dif = None       
+        self.track_dif = None    
+        self.freeze_dif = None   
         self.params_loaded = False
         self.crop_bnds = None
         self.mask = None
@@ -380,18 +417,27 @@ class Video():
         self.scale_w = int(self.scale_orig[0]*self.scale) 
         self.scale_h = int(self.scale_orig[1]*self.scale) 
         self.track = False
+        self.freeze = False
+        self.freeze_state = False 
         self.track_yx = None
         self.track_dist = None
         self.track_dist_cnvsn = dict(name=None, dist=None, dist_px=None, dist_fctr=None)
         self.track_roi = None
         self.track_thresh = 99
+        self.freeze_thresh = 50
+        self.freeze_mtthresh_method = 'mean'
+        self.freeze_mtthresh_thresh = 50
         self.track_method = 'abs'
+        self.freeze_method = 'distance'
         self.track_window_use = False
         self.track_window_sz = 100
         self.track_window_wt = 0.9
         self.track_window_reset = False
         self.track_rmvwire = False
         self.track_rmvwire_krn = 10
+        self.freeze_mtbuffer = [] 
+        self.freeze_mtbuffer_sz = 30
+        self.freeze_mtbuffer_reset = False
         self.writer_initiated = multiprocessing.Event() 
         self.writer_startsig = multiprocessing.Event() 
         self.writer_stopsig = multiprocessing.Event() 
@@ -402,15 +448,10 @@ class Video():
         self.q_frmyx = multiprocessing.Queue(buffer)
         self.q_frmdist = multiprocessing.Queue(buffer)
         self.q_roi = multiprocessing.Queue(buffer)
-        self.freeze_method = None 
-        self.freeze_buffer = [] 
-        self.freeze_buffer_size = None
-        self.freeze_thresh = None
-        self.freeze_thresh_method = None
-        self.freeze_state = False 
-        self.freeze_motion_thresh = None
-        self.freeze = False
         self.q_fz = multiprocessing.Queue(buffer)
+        self.q_mt = multiprocessing.Queue(buffer)
+
+
 
     def scale_set(self, scale=1):
         
@@ -507,22 +548,26 @@ class Video():
   
 
 
-    def display(self, show_xy=True, show_dif = True):
-        
+    def display(self, show_xy=True, show_fz=True, show_dif=False):   
         """ 
         -------------------------------------------------------------------------------------
 
-        OpenCV window allowing display of tracking.  'Q' can be pressed to exit
+        OpenCV window allowing display of tracking and/or freezing.  'Q' can be pressed to exit
 
         -------------------------------------------------------------------------------------
         Args:
             show_xy:: [bool]
-                Dictates whether position of animal should be presented, if tracking.  Can
-                be safely kept to True when not tracking.
+                Dictates whether position of animal should be presented, if tracking. 
+                Also applicable for the distance freezing method. Can be safely kept to True
+                when not tracking.
             
             show_dif:: [bool]
-                Option to display second window where features used for tracking are
-                highlighted.
+                Option to display second window(s) where features used for location tracking
+                and/or freezing analysis are highlighted. 
+
+            show_fz:: [bool]
+                Dictates whether freezing state should be presented, if analyzing freezing.
+                Can be safely kept to True when not analyzing freezing.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -531,41 +576,73 @@ class Video():
         
         while True:
             frame = self.frame.copy()
+
             if show_xy==True and self.track_yx is not None:
                 markposition = (
                         int(self.track_yx[1]),
                         int(self.track_yx[0]))
                 cv2.drawMarker(img=frame,position=markposition,color=255)
+
+            if show_fz==True and self.freeze:
+                freeze_text = 'Freezing' if self.freeze_state else 'Moving'
+                cv2.putText(
+                    img=frame,
+                    text=freeze_text,
+                    org=(frame.shape[1] - 150, 30),
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.7,
+                    color=255,
+                    thickness=2
+                )
+
             cv2.imshow('Video', frame)
+
             if show_dif:
-                try:
-                    cv2.imshow('Difference', self.dif.copy().astype('uint8'))
-                except:
-                    pass
+                if self.track:
+                    try:
+                        cv2.imshow('Tracking Difference', self.track_dif.copy().astype('uint8'))
+                    except:
+                        pass
+                if self.freeze and self.freeze_method == 'pixel':
+                    try:
+                        cv2.imshow('Pixel Difference', self.freeze_dif.copy().astype('uint8'))
+                    except:
+                        pass
+
             #wait for 'q' key response to exit
             if (cv2.waitKey(int(1000/self.fps) & 0xFF) == 113) or not self.started:
                 break  
+
         cv2.destroyAllWindows()
         _=cv2.waitKey(1)
 
-        
-        
+
+
     def get_frames(self):
         
         """ 
         -------------------------------------------------------------------------------------
 
-        Function executed in thread under Video.start to iteratively retrieve frames, 
-        track the animal (if Video.track is True), and calculate freezing 
+        Function executed in thread under Video.start to iteratively retrieve frames and 
+        track the animal (if Video.track is True) and/or measure freezing behaviour
         (if Video.freeze is True).
 
         -------------------------------------------------------------------------------------
         Notes:
 
+        The freezing state calculated during the first frames after frame acquisition begins
+        may be unreliable because Video.freeze_mtbuffer has not yet reached
+        Video.freeze_mtbuffer_sz. During this period, freezing state is determined from an
+        incomplete buffer.
+
         """
-        previous_frame = None
 
         while self.started:
+
+            try:
+                previous_frame = current_frame.copy()
+            except:
+                previous_frame = None
             
             #get latest frame
             try:
@@ -597,7 +674,7 @@ class Video():
                     frame = self.crop_cropframe(frame)
                 self.frame = frame
 
-                #track locatiotn
+                #track location
                 if self.track:
                     track_yx_n1 = self.track_yx
                     self.track_yx = self.locate(self.frame)
@@ -613,35 +690,21 @@ class Video():
                             ]
 
                 if self.freeze:
-                    # calculate freezing using the distance-based method
-                    if self.freeze_method == 'distance':
-                        if track_yx_n1 is not None:
-                            self.freeze_buffer.append(self.track_dist)
-                            if len(self.freeze_buffer) > self.freeze_buffer_size:
-                                self.freeze_buffer.pop(0)
-                            if self.freeze_thresh_method == 'max':
-                                freeze_value = max(self.freeze_buffer)
-                            elif self.freeze_thresh_method == 'mean':
-                                freeze_value = np.mean(self.freeze_buffer)
-                            self.freeze_state = freeze_value < self.freeze_thresh
-
-                    # calculate freezimg using the pixel-based method
-                    elif self.freeze_method == 'pixel':
-                        if previous_frame is not None:
-                            pixel_diff = np.abs(self.frame.astype(float) - previous_frame.astype(float))
-                            pixel_diff[pixel_diff < self.freeze_motion_thresh] = 0
-                            pixel_value = np.mean(pixel_diff)
-                            self.freeze_buffer.append(pixel_value)
-                            if len(self.freeze_buffer) > self.freeze_buffer_size:
-                                self.freeze_buffer.pop(0)
-                            if self.freeze_thresh_method == 'max':
-                                freeze_value = max(self.freeze_buffer)
-                            elif self.freeze_thresh_method == 'mean':
-                                freeze_value = np.mean(self.freeze_buffer)
-                            self.freeze_state = freeze_value < self.freeze_thresh
+                    if self.freeze_method == 'pixel':
+                        current_frame = cv2.blur(self.frame.astype(float), (3,3))
+                        if previous_frame is None:
+                            mtbgrnd_thresh_sum = None
+                        else:
+                            self.freeze_dif = (np.abs(current_frame - previous_frame))
+                            if self.mask is not None:
+                                if self.mask['mask'] is not None:
+                                    self.freeze_dif[self.mask['mask']] = 0
+                            mtbgrnd_thresh_sum = np.sum(self.freeze_dif >= self.freeze_mtthresh_thresh)
+                    motion = self.get_motion(self.track_dist if (self.freeze_method == 'distance') else mtbgrnd_thresh_sum)
+                    self.freeze_state = motion < self.freeze_thresh
 
                 #add frame info to video queues
-                for q in [self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi, self.q_frmdist, self.q_fz]:
+                for q in [self.q_frm, self.q_frmt, self.q_frmyx, self.q_roi, self.q_frmdist, self.q_fz, self.q_mt]:
                     if q.full():
                         q.get()
                 self.q_frm.put(self.frame) 
@@ -652,9 +715,10 @@ class Video():
                     self.q_roi.put(self.track_roi)
                 if self.freeze:
                     self.q_fz.put(self.freeze_state)
+                    self.q_mt.put(motion)
 
-                previous_frame = self.frame.copy()
-            
+
+       
     def ref_create(self, print_sts=True, secs=5):
         
         """ 
@@ -716,6 +780,8 @@ class Video():
             dif = frame-self.ref
         elif self.track_method == 'dark':
             dif = self.ref-frame
+        else:
+            raise ValueError("track_method must be 'abs', 'light', or 'dark'.")
         dif = (dif - dif.min()).astype('int16') #scale so lowest value is 0
         
         if self.track_rmvwire == True:
@@ -743,12 +809,94 @@ class Video():
                 self.track_window_reset = False
         
         dif[dif<np.percentile(dif,self.track_thresh)]=0
-        self.dif = dif.copy()
-        com = center_of_mass(self.dif)
+        self.track_dif = dif.copy()
+        com = center_of_mass(self.track_dif)
         return com
+  
+
+
+    def get_motion(self, mtdif_value):
+        """
+        -------------------------------------------------------------------------------------
+
+        Calculate the motion value used to assess the animal's current freezing state
+        based on the values in Video.freeze_mtbuffer. For the distance freezing method, input is
+        the tracked center-of-mass distance between consecutive frames. For the pixel freezing
+        method, input is the number of pixels with an intensity difference exceeding
+        Video.freeze_mtthresh_thresh between consecutive frames.
+
+        -------------------------------------------------------------------------------------
+        
+        Args:
+            mtdif_value:: [float or None]
+                For the distance freezing method, this is the Euclidean distance between the
+                animal's tracked center-of-mass positions on consecutive frames. For the pixel
+                freezing method, this is the number of pixels with an intensity difference
+                exceeding Video.freeze_mtthresh_thresh between consecutive frames.
+                Can be None, such as for the first frame acquired.
+            
+        -------------------------------------------------------------------------------------
+        
+        Returns:
+            motion:: [float]
+                Motion value to be compared against Video.freeze_thresh.  
+
+        ------------------------------------------------------------------------------------
+        Notes:
+
+        """
+
+        if self.freeze_mtbuffer_reset:
+            self.freeze_mtbuffer = []
+            self.freeze_mtbuffer_reset = False
+
+        if mtdif_value is None:
+            mtdif_value = 0
+        self.freeze_mtbuffer.append(mtdif_value)
+        if len(self.freeze_mtbuffer) > self.freeze_mtbuffer_sz:
+            self.freeze_mtbuffer.pop(0)
+        if self.freeze_mtthresh_method == 'max':
+            motion = max(self.freeze_mtbuffer)
+        elif self.freeze_mtthresh_method == 'mean':
+            motion = np.mean(self.freeze_mtbuffer)
+        else:
+            raise ValueError("freeze_mtthresh_method must be 'max' or 'mean'.")
+        return motion
+
+
+
+    def track_freeze_set(self, track, freeze):
+        """
+        -------------------------------------------------------------------------------------
+
+        Toggles Video.track and/or Video.freeze to enable or disable tracking and/or
+        freezing analysis.
+
+        -------------------------------------------------------------------------------------
+
+        Args:
+            track:: [bool]
+                Boolean value specifying whether tracking should be enabled (True) or
+                disabled (False).
     
-    
-    
+            freeze:: [bool]
+                Boolean value specifying whether freezing analysis should be enabled (True)
+                or disabled (False).
+            
+        -------------------------------------------------------------------------------------
+        Notes:
+
+        Automatically sets Video.track to True when using the distance freezing method.
+
+        """
+
+        self.track = track
+        self.freeze = freeze
+        if self.freeze and self.freeze_method == 'distance':
+            self.track = True
+
+
+
     def crop_define(self):
         
         """ 
@@ -1172,6 +1320,8 @@ class Video():
                 self.q_frmyx,
                 self.q_frmdist,
                 self.q_roi,
+                self.q_fz,
+                self.q_mt,
                 self.frame.copy().shape[1], 
                 self.frame.copy().shape[0],
                 self.writer_initiated,
@@ -1179,7 +1329,8 @@ class Video():
                 self.writer_stopsig,
                 self.writer_emptyq,
                 self.writer_complete,
-                self.track
+                self.track,
+                self.freeze
             )
         ).start()
         while not self.writer_initiated.is_set():
@@ -1226,8 +1377,8 @@ class Video():
     @staticmethod
     def writer_writer(
         save_vid, save_csv, cpath, vpath, compression, fps, roi_names, track_dist_cnvsn,
-        q_frm, q_frmt, q_frmyx, q_frmdist, q_roi, scale_w, scale_h, 
-        initsig, startsig, stopsig, emptyq, complete, track
+        q_frm, q_frmt, q_frmyx, q_frmdist, q_roi, q_fz, q_mt, scale_w, scale_h, 
+        initsig, startsig, stopsig, emptyq, complete, track, freeze
     ):
         
         """ 
@@ -1291,7 +1442,13 @@ class Video():
                 
             q_roi:: [multiprocessing.Queue]
                 Queue of ROI state.  Used for saving.
-                
+
+            q_fz:: [multiprocessing.Queue]
+                Queue of freezing states. Used for saving.
+
+            q_mt:: [multiprocessing.Queue]
+                Queue of motion values. Used for saving.
+        
             scale_w:: [int]
                 Width of frame.
                 
@@ -1327,7 +1484,8 @@ class Video():
             track:: [bool]
                 Boolean indicating whether tracking data is to be saved.
 
-               
+            freeze:: [bool]
+                Boolean indicating whether freezing data is to be saved.
 
         -------------------------------------------------------------------------------------
         Notes:
@@ -1348,6 +1506,8 @@ class Video():
                 ) else 'px')
             dkeys = dkeys + ['y', 'x', dist_col]
             dkeys = dkeys if roi_names is None else dkeys + roi_names
+        if freeze:
+            dkeys += ['freeze', 'motion']
         if save_vid:
             writer = cv2.VideoWriter(
                 filename = vpath, 
@@ -1365,7 +1525,7 @@ class Video():
             time.sleep(.01)            
             if stopsig.is_set():
                 break
-        clear_queues([q_frm, q_frmt, q_frmyx, q_frmdist, q_roi])         
+        clear_queues([q_frm, q_frmt, q_frmyx, q_frmdist, q_roi, q_fz, q_mt])         
         
         #write data
         while not stopsig.is_set() or emptyq.is_set():
@@ -1380,6 +1540,9 @@ class Video():
                     dcsv['y'], dcsv['x'] = frame_yx if track else (None, None)
                     dcsv[dist_col] = frame_dist if track else None
                     dcsv.update(roi) if (track and roi_names is not None) else None
+                if freeze:
+                    dcsv['freeze'] = q_fz.get(timeout=1/fps)
+                    dcsv['motion'] = q_mt.get(timeout=1/fps)
                 if save_csv:
                     pd.DataFrame(
                         {k:v for k,v in dcsv.items() if k in dkeys},
@@ -1506,30 +1669,6 @@ def euc_dist(pos_0, pos_n1, cnvsn=None, dist=None):
         dist = dist if cnvsn is None else dist*cnvsn
     return dist
 
-        
-        
-        
-        
-        
-        
-   
-    
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         
         
