@@ -22,7 +22,7 @@ import time
 import datetime
 import threading, multiprocessing, queue
 import functools as fct
-from scipy.ndimage.measurements import center_of_mass
+from scipy.ndimage import center_of_mass
 from threading import Thread
 from IPython.display import clear_output
 hv.notebook_extension('bokeh')
@@ -77,7 +77,7 @@ class Video():
         - track_dif
         - freeze_dif
         - params_loaded
-        - crp_bnds
+        - crop_bnds
         - mask
         - roi_names
         - roi_masks
@@ -188,15 +188,15 @@ class Video():
                 Indicates whether parameters have been loaded from a file using
                 Video.params_load method. 
 
-            crp_bnds:: [None, holoviews.streams.BoxEdit or dictionary]
+            crop_bnds:: [None, holoviews.streams.BoxEdit or dictionary]
                 Defines cropping bounds of frame, after scaling. Set to None if no cropping 
                 is to be performed.  Can be drawn in Jupyter Notebook using Video.crop_define,
                 subsequently saved using Video.params_save, and then loaded using
                 Video.params_load.  To set this manually Video.params_loaded will also need to 
-                be set to True.  When defined manually, Video.crp_bnds should be a dictionary 
+                be set to True.  When defined manually, Video.crop_bnds should be a dictionary 
                 with the following keys: ['x0', 'x1', 'y0', 'y1'], and each value should be a 
                 list of length 1.  
-                For example "Video.crp_bnds = dict(x0=[5], x1=[500], y0=[10], y1=[300])"
+                For example "Video.crop_bnds = dict(x0=[5], x1=[500], y0=[10], y1=[300])"
 
             mask:: [bool array]
                 Boolean numpy array identifying regions to exclude from tracking/freezing. 
@@ -473,8 +473,8 @@ class Video():
         """
         
         self.scale = scale
-        self.w = int(self.scale_orig[0]*self.scale) 
-        self.h = int(self.scale_orig[1]*self.scale) 
+        self.scale_w = int(self.scale_orig[0]*self.scale) 
+        self.scale_h = int(self.scale_orig[1]*self.scale) 
 
         
         
@@ -666,10 +666,7 @@ class Video():
 
                 #scale, crop, and mask frame
                 if self.scale != 1:
-                    frame = cv2.resize(
-                        frame,
-                        (self.scale_w, self.scale_h),
-                        cv2.INTER_NEAREST)
+                    frame = cv2.resize(frame, (self.scale_w, self.scale_h), interpolation=cv2.INTER_NEAREST)
                 if self.crop_bnds is not None:
                     frame = self.crop_cropframe(frame)
                 self.frame = frame
